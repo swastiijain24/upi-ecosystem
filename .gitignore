@@ -1,0 +1,13 @@
+# binaries
+bin/
+*.exe
+*.out
+
+# env files
+.env
+
+# build
+dist/
+
+# logs
+*.log
