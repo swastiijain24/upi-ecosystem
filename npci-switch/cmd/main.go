@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/swastiijain24/npci-switch/internals/clients"
+	"github.com/swastiijain24/npci-switch/internals/db"
 	"github.com/swastiijain24/npci-switch/internals/handlers"
+	"github.com/swastiijain24/npci-switch/internals/redis"
 	"github.com/swastiijain24/npci-switch/internals/routes"
 	"github.com/swastiijain24/npci-switch/internals/services"
+	"github.com/swastiijain24/npci-switch/internals/workers"
 )
 
 func main() {
@@ -17,6 +21,19 @@ func main() {
 	if err != nil {
 		log.Println("No .env file found")
 	}
+
+	ctx := context.Background()
+
+	//we connect to the databse before starting the server obv 
+
+	connString := os.Getenv("DBSTRING")
+
+	pool := db.NewPostgres(connString)
+
+	log.Println(pool)
+
+	redisClient := redis.NewRedis()
+	log.Println(redisClient)
 
 
 	r := gin.New()
@@ -32,5 +49,17 @@ func main() {
 		port  = "8081"
 	}
 
-	r.Run(":"+port)
+
+	//start the workers
+	debitWorker := workers.NewDebitWorker(redisClient)
+	go debitWorker.Start((ctx))
+	creditWorker := workers.NewCreditWorker(redisClient)
+	go creditWorker.Start(ctx)
+
+
+	
+	if err:= r.Run(":"+port); err!=nil{
+		log.Fatal("failed to start server")
+	}
+	
 }
