@@ -2,45 +2,70 @@ package services
 
 import (
 	"context"
+	"errors"
+	"log"
 
 	"github.com/google/uuid"
-	"github.com/swastiijain24/npci-switch/internals/clients"
-	"github.com/swastiijain24/npci-switch/internals/models"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	repo "github.com/swastiijain24/npci-switch/internals/adapters/sqlc"
+	"github.com/swastiijain24/npci-switch/internals/helpers"
+	"github.com/swastiijain24/npci-switch/internals/redis_stream"
 )
 
 type Service interface {
-	InitiatePayment(ctx context.Context, sender_accountId string , receiver_accountId string , amount int64)  (models.PaymentResponse, error)
+	InitiatePayment(ctx context.Context, payerVpa string, payerBank string, payeeVpa string, payeeBank string, amount int64, referenceID pgtype.Text) (error)
 }
 
 type svc struct {
-	bankClient clients.BankClient
+	q *repo.Queries
+	r *redis_stream.EventPublisher
 }
 
-func NewService(bankClient clients.BankClient) Service {
+func NewService(q *repo.Queries, r *redis_stream.EventPublisher) Service {
 	return &svc{
-		bankClient: bankClient,
+		q: q,
+		r: r,
 	}
 }
 
-func (s *svc) InitiatePayment(ctx context.Context,senderAccountId string , receiverAccountId string , amount int64) (models.PaymentResponse, error) {
-	txId := generateId()
+func (s *svc) InitiatePayment(ctx context.Context, payerVpa string, payerBank string, payeeVpa string, payeeBank string, amount int64, referenceID pgtype.Text) ( error) {
 
-	if err:= s.bankClient.Debit(senderAccountId, amount); err!=nil{
-		return models.PaymentResponse{}, err
+	txn, err := s.q.GetTransactionByReference(ctx, referenceID)
+
+	if err != nil {
+
+		if errors.Is(err, pgx.ErrNoRows) { //we only have to cehck if the row with this referid trnx exists or not if not then only create new , not for all errors
+			txn, err = s.q.CreateTransaction(ctx, repo.CreateTransactionParams{
+				ID:          helpers.ToPgUUID(uuid.New()),
+				PayerVpa:    payerVpa,
+				PayerBank:   payerBank,
+				PayeeVpa:    payeeVpa,
+				PayeeBank:   payeeBank,
+				Amount:      amount,
+				State:       "INITIATED",
+				ReferenceID: referenceID,
+			})
+			if err != nil {
+				log.Println("failed to create txn:", err)
+				return err
+			}
+
+		} else {
+
+			log.Println("db error:", err)
+			return err
+		}
 	}
 
-	if err:= s.bankClient.Credit(receiverAccountId, amount); err!=nil{
-		s.bankClient.Credit(senderAccountId, amount)
-		return models.PaymentResponse{}, err
+	err = s.r.Publish(ctx, "txn_stream", map[string]interface{}{
+		"txn_id": txn.ID.String(),
+		"event":  "txn.initiated",
+	})
+	if err != nil {
+		log.Println("event publish failed, retry later")
 	}
 
-	return models.PaymentResponse{
-		TransactionID: txId,
-		Status: "SUCCESS",
-	} , nil
+	return nil 
 
-}
-
-func generateId() string {
-	return "tx_" + uuid.New().String()
 }

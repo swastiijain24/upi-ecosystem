@@ -7,10 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"github.com/swastiijain24/npci-switch/internals/clients"
+	repo "github.com/swastiijain24/npci-switch/internals/adapters/sqlc"
 	"github.com/swastiijain24/npci-switch/internals/db"
 	"github.com/swastiijain24/npci-switch/internals/handlers"
-	"github.com/swastiijain24/npci-switch/internals/redis"
+	"github.com/swastiijain24/npci-switch/internals/redis_stream"
 	"github.com/swastiijain24/npci-switch/internals/routes"
 	"github.com/swastiijain24/npci-switch/internals/services"
 	"github.com/swastiijain24/npci-switch/internals/workers"
@@ -32,14 +32,13 @@ func main() {
 
 	log.Println(pool)
 
-	redisClient := redis.NewRedis()
+	redisClient := redis_stream.NewRedis()
 	log.Println(redisClient)
 
 
 	r := gin.New()
-
-	bankClient := clients.NewBankClient()
-	paymentService := services.NewService(bankClient)
+	eventPublisher := redis_stream.NewPublisher(redisClient)
+	paymentService := services.NewService(repo.New(pool), eventPublisher)
 	paymentHandler := handlers.NewHandler(paymentService)
 	routes.SetupRoutes(r, paymentHandler)
 
@@ -51,12 +50,10 @@ func main() {
 
 
 	//start the workers
-	debitWorker := workers.NewDebitWorker(redisClient)
-	go debitWorker.Start((ctx))
-	creditWorker := workers.NewCreditWorker(redisClient)
+	debitWorker := workers.NewDebitWorker(redisClient, repo.New(pool), eventPublisher)
+	go debitWorker.Start(ctx)
+	creditWorker := workers.NewCreditWorker(redisClient, repo.New(pool), eventPublisher)
 	go creditWorker.Start(ctx)
-
-
 	
 	if err:= r.Run(":"+port); err!=nil{
 		log.Fatal("failed to start server")
