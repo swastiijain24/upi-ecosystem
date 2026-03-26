@@ -5,18 +5,14 @@ import (
 	"github.com/swastiijain24/bank-management/internals/handlers"
 )
 
-func RegisterRoutes(r *gin.Engine, accountHandler* handlers.Handler){
+func RegisterAccountRoutes(r *gin.Engine, accountHandler* handlers.AccountHandler){
 
 	accountRoutes := r.Group("/accounts")
 	{
 		accountRoutes.POST("/", accountHandler.CreateAccount)
 		accountRoutes.GET("/:id", accountHandler.GetAccountById)
-		accountRoutes.POST("/debit", accountHandler.Debit)
-		accountRoutes.POST("/credit", accountHandler.Credit)
-		accountRoutes.GET("/:id/transactions", accountHandler.GetTransactions)
-		accountRoutes.GET("/:id/balance", accountHandler.CheckBalance)
-
+		accountRoutes.GET("/:id/balance", accountHandler.GetBalance)
+		accountRoutes.DELETE("/:id", accountHandler.DeleteAccount)
 	}
-	
 }
 

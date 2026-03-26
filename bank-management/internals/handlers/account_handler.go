@@ -2,41 +2,41 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/swastiijain24/bank-management/internals/dtos"
 	"github.com/swastiijain24/bank-management/internals/services"
 )
 
-type Handler struct {
-	service services.Service
+type AccountHandler struct {
+	accountService services.AccountService
 }
 
-func NewHandler(s services.Service) *Handler {
-	return &Handler{
-		service: s,
+func NewAccountHandler(s services.AccountService) *AccountHandler {
+	return &AccountHandler{
+		accountService: s,
 	}
 }
 
-func (h *Handler) GetAccountById(c *gin.Context){
+func (h *AccountHandler) GetAccountById(c *gin.Context){
 	id := c.Param("id")
 	
-	account, err := h.service.GetAccountById(c.Request.Context(), id)
+	account, err := h.accountService.GetAccountById(c.Request.Context(), id)
 	if err!= nil{
 		c.JSON(400, gin.H{"error":err.Error()})
 		return
 	}
 
 	c.JSON(200, gin.H{"account":account})
-
 }
 
-func (h *Handler) CreateAccount(c *gin.Context){
-	var accountDetails CreateAccountReq
+func (h *AccountHandler) CreateAccount(c *gin.Context){
+	var accountDetails dtos.CreateAccountReq
 
 	if err:= c.ShouldBindJSON(&accountDetails); err !=nil{
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
-	account, err:= h.service.CreateAccount(c.Request.Context(), accountDetails.Name, accountDetails.Phone)
+	account, err:= h.accountService.CreateAccount(c.Request.Context(), accountDetails)
 	if err !=nil{
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -44,54 +44,11 @@ func (h *Handler) CreateAccount(c *gin.Context){
 	c.JSON(201, account)
 }
 
-func (h *Handler) Debit(c *gin.Context){
-	var debitReq DebitCreditRequest
-	if err:= c.ShouldBindJSON(&debitReq); err!= nil{
-		c.JSON(400, gin.H{"error":err.Error()})
-		return
-	}
 
-	transaction, err := h.service.Debit(c.Request.Context(), debitReq.AccountID, debitReq.Amount)
-	if err!=nil{
-		c.JSON(400, gin.H{"error":err.Error()})
-		return
-	}
-	c.JSON(200, transaction)
-}
-
-
-func (h *Handler) Credit(c *gin.Context){
-	var creditReq DebitCreditRequest
-	if err := c.ShouldBindJSON(&creditReq); err!=nil{
-		c.JSON(400, gin.H{"error": err.Error()})
-		return 
-	}
-	transaction, err:= h.service.Credit(c.Request.Context(), creditReq.AccountID, creditReq.Amount)
-	if err!=nil{
-		c.JSON(400, gin.H{"error":err.Error()})
-		return
-	}
-	c.JSON(200, transaction)
-}
-
-
-func (h *Handler) GetTransactions(c *gin.Context){
+func (h *AccountHandler) GetBalance(c *gin.Context){
 	id := c.Param("id")
 	
-	transactions, err := h.service.GetTransactions(c.Request.Context(), id)
-	if err!= nil{
-		c.JSON(400, gin.H{"error":err.Error()})
-		return 
-	}
-	c.JSON(200, transactions)
-
-}
-
-
-func (h *Handler) CheckBalance(c *gin.Context){
-	id := c.Param("id")
-	
-	balance, err := h.service.CheckBalance(c.Request.Context(), id)
+	balance, err := h.accountService.GetBalance(c.Request.Context(), id)
 	if err!= nil{
 		c.JSON(400, gin.H{"error":err.Error()})
 		return 
@@ -99,12 +56,7 @@ func (h *Handler) CheckBalance(c *gin.Context){
 	c.JSON(200, balance)
 }
 
-type DebitCreditRequest struct {
-	AccountID string `json:"account_id"`
-	Amount    int64  `json:"amount"`
-}
 
-type CreateAccountReq struct{
-	Name    string `json:"name"`
-	Phone   string `json:"phone"`
+func (h *AccountHandler) DeleteAccount(c *gin.Context){
+	// id := c.Param("id")
 }

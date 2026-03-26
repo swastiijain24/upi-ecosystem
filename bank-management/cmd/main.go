@@ -8,10 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
-	repo "github.com/swastiijain24/bank-management/internals/adapters/sqlc"
-	"github.com/swastiijain24/bank-management/internals/handlers"
-	"github.com/swastiijain24/bank-management/internals/routes"
-	"github.com/swastiijain24/bank-management/internals/services"
+	
 )
 
 func main() {
@@ -23,6 +20,7 @@ func main() {
 
 	ctx := context.Background()
 	dsn := os.Getenv("GOOSE_DBSTRING")
+	
 	conn, err := pgx.Connect(ctx, dsn)
 	if err != nil {
 		panic(err) 
@@ -32,12 +30,8 @@ func main() {
 	log.Printf("connected to database")
 
 	r := gin.New()
-
-	accountService := services.NewService(repo.New(conn), conn)
-	accountHandler := handlers.NewHandler(accountService)
-
 	r.Use(gin.Logger())
-	routes.RegisterRoutes(r, accountHandler)
+	Initialize(r, conn)
 
 	port := os.Getenv("PORT")
 

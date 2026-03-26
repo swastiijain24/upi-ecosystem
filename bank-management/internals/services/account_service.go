@@ -4,164 +4,60 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	repo "github.com/swastiijain24/bank-management/internals/adapters/sqlc"
+	"github.com/swastiijain24/bank-management/internals/dtos"
+	repo "github.com/swastiijain24/bank-management/internals/repositories"
+	"github.com/swastiijain24/bank-management/internals/utils"
 )
 
-type Service interface {
+type AccountService interface {
 	GetAccountById(ctx context.Context, id string) (repo.Account, error)
-	CreateAccount(ctx context.Context, accountName string, accountPhone string) (repo.Account, error)
-	Debit(ctx context.Context, accountId string, amount int64) (repo.Transaction, error)
-	Credit(ctx context.Context, accountId string, amount int64) (repo.Transaction, error)
-	GetTransactions(ctx context.Context, accountId string) ([]repo.Transaction, error)
-	CheckBalance(ctx context.Context, accountId string) (int64, error)
+	CreateAccount(ctx context.Context, accountDetails dtos.CreateAccountReq) (repo.CreateAccountRow, error)
+	GetBalance(ctx context.Context, accountId string) (int64, error)
 }
 
-type svc struct {
+type accsvc struct {
 	repo repo.Querier
 	db   *pgx.Conn
 }
 
-func NewService(repo repo.Querier, db *pgx.Conn) Service {
-	return &svc{
+func NewAccountService(repo repo.Querier, db *pgx.Conn) AccountService {
+	return &accsvc{
 		repo: repo,
 		db:   db,
 	}
 }
 
-func (s *svc) GetAccountById(ctx context.Context, id string) (repo.Account, error) {
-	return s.repo.GetAccountByID(ctx, id)
-
+func (s *accsvc) GetAccountById(ctx context.Context, id string) (repo.Account, error) {
+	return s.repo.GetAccountByID(ctx, utils.StringtoUUID(id))
 }
 
-func (s *svc) CreateAccount(ctx context.Context, accountName string, accountPhone string) (repo.Account, error) {
+func (s *accsvc) CreateAccount(ctx context.Context,  accountDetails dtos.CreateAccountReq) (repo.CreateAccountRow, error) {
 
-	if accountName == "" {
-		return repo.Account{}, fmt.Errorf("Name not given")
-
-	}
-
-	if accountPhone == "" {
-		return repo.Account{}, fmt.Errorf("Phone not given")
+	if accountDetails.Name == "" {
+		return repo.CreateAccountRow{}, fmt.Errorf("Name not given")
 
 	}
 
-	accountDetails := repo.CreateAccountParams{
-		ID:    generateId("acc"),
-		Name:  accountName,
-		Phone: accountPhone,
+	if accountDetails.Phone == "" {
+		return repo.CreateAccountRow{}, fmt.Errorf("Phone not given")
+
 	}
 
-	account, err := s.repo.CreateAccount(ctx, accountDetails)
+	accountParams := repo.CreateAccountParams{
+		Name:  accountDetails.Name,
+		Phone: accountDetails.Phone,
+	}
+
+	account, err := s.repo.CreateAccount(ctx, accountParams)
 	if err != nil {
-		return repo.Account{}, fmt.Errorf("Phone not given")
+		return repo.CreateAccountRow{}, fmt.Errorf("Error creating account")
 	}
 
 	return account, err
 }
 
-func generateId(prefix string) string {
-	return prefix + "-" + uuid.New().String()
+func (s *accsvc) GetBalance(ctx context.Context, accountId string) (int64, error) {
+	return s.repo.GetBalance(ctx, utils.StringtoUUID(accountId))
 }
 
-func (s *svc) Debit(ctx context.Context, accountId string, amount int64) (repo.Transaction, error) {
-	dbTx, err := s.db.Begin(ctx)
-	if err != nil {
-		return repo.Transaction{}, err
-	}
-	defer dbTx.Rollback(ctx)
-
-	qtx := repo.New(dbTx)
-
-	account, err := qtx.GetAccountForUpdate(ctx, accountId)
-	if err != nil {
-		return repo.Transaction{}, err
-	}
-
-	if account.Balance < amount {
-		return repo.Transaction{}, fmt.Errorf("insufficient balance")
-	}
-
-	if amount <= 0 {
-		return repo.Transaction{}, fmt.Errorf("invalid amount")
-	}
-
-	updatedParamsObj := repo.UpdateAccountBalanceParams{
-		Balance: account.Balance - amount,
-		ID:      accountId,
-	}
-
-	if err := qtx.UpdateAccountBalance(ctx, updatedParamsObj); err != nil {
-		return repo.Transaction{}, err
-	}
-
-	txParamsObj := repo.CreateTransactionParams{
-		ID:        generateId("tx"),
-		AccountID: accountId,
-		Amount:    amount,
-		Type:      "DEBIT",
-		Status:    "SUCCESS",
-	}
-
-	transaction, err := qtx.CreateTransaction(ctx, txParamsObj)
-	if err != nil {
-		return repo.Transaction{}, err
-	}
-
-	if err := dbTx.Commit(ctx); err != nil {
-		return repo.Transaction{}, err
-	}
-	return transaction, err
-
-}
-
-func (s *svc) Credit(ctx context.Context, accountId string, amount int64) (repo.Transaction, error) {
-	dbTx, err := s.db.Begin(ctx)
-	if err != nil {
-		return repo.Transaction{}, err
-	}
-	defer dbTx.Rollback(ctx)
-
-	qtx := repo.New(dbTx)
-
-	account, err := qtx.GetAccountForUpdate(ctx, accountId)
-	if err != nil {
-		return repo.Transaction{}, err
-	}
-
-	updatedParamsObj := repo.UpdateAccountBalanceParams{
-		ID:      accountId,
-		Balance: account.Balance + amount,
-	}
-
-	if err := qtx.UpdateAccountBalance(ctx, updatedParamsObj); err != nil {
-		return repo.Transaction{}, err
-	}
-
-	txParamsObj := repo.CreateTransactionParams{
-		ID:        generateId("tx"),
-		AccountID: accountId,
-		Amount:    amount,
-		Type:      "CREDIT",
-		Status:    "SUCCESS",
-	}
-
-	transaction, err := qtx.CreateTransaction(ctx, txParamsObj)
-	if err != nil {
-		return repo.Transaction{}, err
-	}
-
-	if err := dbTx.Commit(ctx); err != nil {
-		return repo.Transaction{}, err
-	}
-	return transaction, err
-}
-
-func (s *svc) GetTransactions(ctx context.Context, accountId string) ([]repo.Transaction, error) {
-	return s.repo.GetTransactions(ctx, accountId)
-}
-
-func (s *svc) CheckBalance(ctx context.Context, accountId string) (int64, error) {
-	return s.repo.CheckBalance(ctx, accountId)
-}
