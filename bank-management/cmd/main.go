@@ -31,14 +31,17 @@ func main() {
 
 	r := gin.New()
 	r.Use(gin.Logger())
+
+	log.Printf("intializing")
 	Initialize(r, conn)
+
+	log.Printf("initialized all")
 
 	port := os.Getenv("PORT")
 
 	if port == ""{
 		port = "8080"
 	}
-	
 
 	log.Printf("server running")
 	r.Run(":" + port)

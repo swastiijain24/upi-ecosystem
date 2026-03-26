@@ -58,5 +58,12 @@ func (h *AccountHandler) GetBalance(c *gin.Context){
 
 
 func (h *AccountHandler) DeleteAccount(c *gin.Context){
-	// id := c.Param("id")
+	id := c.Param("id")
+
+	err := h.accountService.DeleteAccount(c, id)
+	if err!=nil{
+		c.JSON(400, gin.H{"error":err.Error()})
+		return 
+	}
+	c.JSON(204, nil)
 }

@@ -15,11 +15,13 @@ type Querier interface {
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error)
 	CreateLedgerEntry(ctx context.Context, arg CreateLedgerEntryParams) error
 	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error)
+	DeleteAccount(ctx context.Context, id pgtype.UUID) error
 	GetAccountByID(ctx context.Context, id pgtype.UUID) (Account, error)
 	GetAccountForUpdate(ctx context.Context, id pgtype.UUID) (Account, error)
 	GetBalance(ctx context.Context, id pgtype.UUID) (int64, error)
 	GetTransactions(ctx context.Context, fromAccountID string) ([]Transaction, error)
 	UpdateAccountBalance(ctx context.Context, arg UpdateAccountBalanceParams) error
+	UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) error
 }
 
 var _ Querier = (*Queries)(nil)

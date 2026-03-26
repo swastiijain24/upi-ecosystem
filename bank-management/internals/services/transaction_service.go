@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/swastiijain24/bank-management/internals/dtos"
 	repo "github.com/swastiijain24/bank-management/internals/repositories"
@@ -91,7 +90,15 @@ func (s *txnsvc) Debit(ctx context.Context,debitDetails dtos.DebitCreditRequest)
 		return repo.Transaction{}, err
 	}
 
-	transaction.Status = "SUCCESS"
+	transactionStatusParams := repo.UpdatePaymentStatusParams{
+		ID: transaction.ID,
+		Status: "SUCCESS",
+	}
+
+	if err := qtx.UpdatePaymentStatus(ctx, transactionStatusParams); err!=nil{
+		return repo.Transaction{}, err
+	}
+	
 
 	if err := dbTx.Commit(ctx); err != nil {
 		return repo.Transaction{}, err
@@ -156,7 +163,16 @@ func (s *txnsvc) Credit(ctx context.Context, creditDetails dtos.DebitCreditReque
 		return repo.Transaction{}, err
 	}
 
-	transaction.Status = "SUCCESS"
+
+	transactionStatusParams := repo.UpdatePaymentStatusParams{
+		ID: transaction.ID,
+		Status: "SUCCESS",
+	}
+
+
+	if err := qtx.UpdatePaymentStatus(ctx, transactionStatusParams); err!=nil{
+		return repo.Transaction{}, err
+	}
 
 	if err := dbTx.Commit(ctx); err != nil {
 		return repo.Transaction{}, err
@@ -165,5 +181,5 @@ func (s *txnsvc) Credit(ctx context.Context, creditDetails dtos.DebitCreditReque
 }
 
 func (s *txnsvc) GetTransactions(ctx context.Context, accountID string) ([]repo.Transaction, error) {
-	return s.repo.GetTransactions(ctx, accountID )
+	return s.repo.GetTransactions(ctx, accountID)
 }

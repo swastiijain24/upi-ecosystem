@@ -10,7 +10,7 @@ import (
 )
 
 
-func Initialize(r *gin.Engine,conn *pgx.Conn) {
+func Initialize(r *gin.Engine, conn *pgx.Conn) {
 	
 	repository := repo.New(conn)
 

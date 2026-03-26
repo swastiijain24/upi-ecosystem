@@ -59,5 +59,19 @@ WHERE id = $1;
 -- name: GetTransactions :many
 SELECT *
 FROM transactions
-WHERE from_account_id = $1
+WHERE from_account_id = $1 or to_account_identifier = $1
 ORDER BY created_at DESC;
+
+-- name: DeleteAccount :exec
+UPDATE accounts
+SET deleted_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1
+  AND deleted_at IS NULL;
+
+-- name: UpdatePaymentStatus :exec
+UPDATE transactions
+SET status = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND status != $2;

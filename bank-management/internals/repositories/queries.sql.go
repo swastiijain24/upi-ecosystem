@@ -135,6 +135,19 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 	return i, err
 }
 
+const deleteAccount = `-- name: DeleteAccount :exec
+UPDATE accounts
+SET deleted_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1
+  AND deleted_at IS NULL
+`
+
+func (q *Queries) DeleteAccount(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAccount, id)
+	return err
+}
+
 const getAccountByID = `-- name: GetAccountByID :one
 SELECT id, name, balance, created_at, updated_at, deleted_at, phone
 FROM accounts
@@ -193,7 +206,7 @@ func (q *Queries) GetBalance(ctx context.Context, id pgtype.UUID) (int64, error)
 const getTransactions = `-- name: GetTransactions :many
 SELECT id, from_account_id, to_account_identifier, amount, status, created_at, updated_at
 FROM transactions
-WHERE from_account_id = $1
+WHERE from_account_id = $1 or to_account_identifier = $1
 ORDER BY created_at DESC
 `
 
@@ -238,5 +251,23 @@ type UpdateAccountBalanceParams struct {
 
 func (q *Queries) UpdateAccountBalance(ctx context.Context, arg UpdateAccountBalanceParams) error {
 	_, err := q.db.Exec(ctx, updateAccountBalance, arg.ID, arg.Balance)
+	return err
+}
+
+const updatePaymentStatus = `-- name: UpdatePaymentStatus :exec
+UPDATE transactions
+SET status = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND status != $2
+`
+
+type UpdatePaymentStatusParams struct {
+	ID     pgtype.UUID `json:"id"`
+	Status string      `json:"status"`
+}
+
+func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) error {
+	_, err := q.db.Exec(ctx, updatePaymentStatus, arg.ID, arg.Status)
 	return err
 }
