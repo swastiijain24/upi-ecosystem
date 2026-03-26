@@ -16,6 +16,7 @@ type Account struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
 	Phone     string             `json:"phone"`
+	IsSystem  bool               `json:"is_system"`
 }
 
 type IdempotencyKey struct {
@@ -26,13 +27,15 @@ type IdempotencyKey struct {
 }
 
 type LedgerEntry struct {
-	ID           pgtype.UUID        `json:"id"`
-	AccountID    pgtype.UUID        `json:"account_id"`
-	Type         string             `json:"type"`
-	Amount       int64              `json:"amount"`
-	BalanceAfter int64              `json:"balance_after"`
-	Description  pgtype.Text        `json:"description"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ID            pgtype.UUID        `json:"id"`
+	AccountID     pgtype.UUID        `json:"account_id"`
+	Type          string             `json:"type"`
+	BalanceAfter  int64              `json:"balance_after"`
+	Description   pgtype.Text        `json:"description"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	TransactionID pgtype.UUID        `json:"transaction_id"`
+	Debit         int64              `json:"debit"`
+	Credit        int64              `json:"credit"`
 }
 
 type Transaction struct {

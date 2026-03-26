@@ -55,6 +55,11 @@ func (s *txnsvc) Debit(ctx context.Context,debitDetails dtos.DebitCreditRequest)
 		return repo.Transaction{}, fmt.Errorf("insufficient balance")
 	}
 
+	settlementAccount, err := qtx.GetSettlementAccountForUpdate(ctx)
+	if err != nil {
+		return repo.Transaction{}, err
+	}
+
 	txParamsObj := repo.CreateTransactionParams{
 		FromAccountID:       debitDetails.FromAccountID,
 		ToAccountIdentifier: debitDetails.ToAccountId,
@@ -70,14 +75,30 @@ func (s *txnsvc) Debit(ctx context.Context,debitDetails dtos.DebitCreditRequest)
 	newBalance := account.Balance - debitDetails.Amount
 
 	ledgerParams := repo.CreateLedgerEntryParams{
+		TransactionID: transaction.ID,
 		AccountID:    utils.StringtoUUID(debitDetails.FromAccountID),
 		Type:         "DEBIT",
-		Amount:       debitDetails.Amount,
+		Debit:       debitDetails.Amount,
+		Credit: 0,
 		BalanceAfter: newBalance,
 		Description:  utils.ToPGText(debitDetails.Description),
 	}
 
 	if err := qtx.CreateLedgerEntry(ctx, ledgerParams); err != nil {
+		return repo.Transaction{}, err
+	}
+
+	ledgerParamsSettlementAccount := repo.CreateLedgerEntryParams{
+		TransactionID: transaction.ID,
+		AccountID:    settlementAccount.ID,
+		Type:         "CREDIT",
+		Credit: debitDetails.Amount,
+		Debit:       0,
+		BalanceAfter: newBalance,
+		Description:  utils.ToPGText("settlement account"),
+	}
+
+	if err := qtx.CreateLedgerEntry(ctx, ledgerParamsSettlementAccount); err != nil {
 		return repo.Transaction{}, err
 	}
 
@@ -127,6 +148,11 @@ func (s *txnsvc) Credit(ctx context.Context, creditDetails dtos.DebitCreditReque
 		return repo.Transaction{}, err
 	}
 
+	settlementAccount, err := qtx.GetSettlementAccountForUpdate(ctx)
+	if err != nil {
+		return repo.Transaction{}, err
+	}
+
 	txParamsObj := repo.CreateTransactionParams{
 		FromAccountID:       creditDetails.FromAccountID,
 		ToAccountIdentifier: creditDetails.ToAccountId,
@@ -143,9 +169,11 @@ func (s *txnsvc) Credit(ctx context.Context, creditDetails dtos.DebitCreditReque
 	newBalance := account.Balance + creditDetails.Amount
 
 	ledgerParams := repo.CreateLedgerEntryParams{
+		TransactionID: transaction.ID,
 		AccountID:    utils.StringtoUUID(creditDetails.ToAccountId),
 		Type:         "CREDIT",
-		Amount:       creditDetails.Amount,
+		Credit:       creditDetails.Amount,
+		Debit: 0,
 		BalanceAfter: newBalance,
 		Description:  utils.ToPGText(creditDetails.Description),
 	}
@@ -153,6 +181,22 @@ func (s *txnsvc) Credit(ctx context.Context, creditDetails dtos.DebitCreditReque
 	if err := qtx.CreateLedgerEntry(ctx, ledgerParams); err != nil {
 		return repo.Transaction{}, err
 	}
+
+
+	ledgerParamsSettlementAccount := repo.CreateLedgerEntryParams{
+		TransactionID: transaction.ID,
+		AccountID:    settlementAccount.ID,
+		Type:         "DEBIT",
+		Debit:       creditDetails.Amount,
+		Credit: 0,
+		BalanceAfter: newBalance,
+		Description:  utils.ToPGText("settlement account"),
+	}
+
+	if err := qtx.CreateLedgerEntry(ctx, ledgerParamsSettlementAccount); err != nil {
+		return repo.Transaction{}, err
+	}
+
 
 	updatedParamsObj := repo.UpdateAccountBalanceParams{
 		Balance: newBalance,

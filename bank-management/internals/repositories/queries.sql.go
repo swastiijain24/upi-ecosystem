@@ -67,32 +67,61 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (C
 
 const createLedgerEntry = `-- name: CreateLedgerEntry :exec
 INSERT INTO ledger_entries (
+    transaction_id,
     account_id,
     type,
-    amount,
+    debit,
+    credit,
     balance_after,
     description
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6, $7
 )
 `
 
 type CreateLedgerEntryParams struct {
-	AccountID    pgtype.UUID `json:"account_id"`
-	Type         string      `json:"type"`
-	Amount       int64       `json:"amount"`
-	BalanceAfter int64       `json:"balance_after"`
-	Description  pgtype.Text `json:"description"`
+	TransactionID pgtype.UUID `json:"transaction_id"`
+	AccountID     pgtype.UUID `json:"account_id"`
+	Type          string      `json:"type"`
+	Debit         int64       `json:"debit"`
+	Credit        int64       `json:"credit"`
+	BalanceAfter  int64       `json:"balance_after"`
+	Description   pgtype.Text `json:"description"`
 }
 
 func (q *Queries) CreateLedgerEntry(ctx context.Context, arg CreateLedgerEntryParams) error {
 	_, err := q.db.Exec(ctx, createLedgerEntry,
+		arg.TransactionID,
 		arg.AccountID,
 		arg.Type,
-		arg.Amount,
+		arg.Debit,
+		arg.Credit,
 		arg.BalanceAfter,
 		arg.Description,
 	)
+	return err
+}
+
+const createSettlementAccount = `-- name: CreateSettlementAccount :exec
+INSERT INTO accounts (
+    name,
+    phone,
+    is_system
+)
+SELECT 
+    'Settlement Account',
+    'SYSTEM',
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1 
+    FROM accounts 
+    WHERE is_system = TRUE 
+      AND name = 'Settlement Account'
+)
+`
+
+func (q *Queries) CreateSettlementAccount(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, createSettlementAccount)
 	return err
 }
 
@@ -149,7 +178,7 @@ func (q *Queries) DeleteAccount(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getAccountByID = `-- name: GetAccountByID :one
-SELECT id, name, balance, created_at, updated_at, deleted_at, phone
+SELECT id, name, balance, created_at, updated_at, deleted_at, phone, is_system
 FROM accounts
 WHERE id = $1 AND deleted_at IS NULL
 `
@@ -165,12 +194,13 @@ func (q *Queries) GetAccountByID(ctx context.Context, id pgtype.UUID) (Account, 
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.Phone,
+		&i.IsSystem,
 	)
 	return i, err
 }
 
 const getAccountForUpdate = `-- name: GetAccountForUpdate :one
-SELECT id, name, balance, created_at, updated_at, deleted_at, phone FROM accounts
+SELECT id, name, balance, created_at, updated_at, deleted_at, phone, is_system FROM accounts
 WHERE id = $1 AND deleted_at IS NULL
 FOR UPDATE
 `
@@ -186,6 +216,7 @@ func (q *Queries) GetAccountForUpdate(ctx context.Context, id pgtype.UUID) (Acco
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.Phone,
+		&i.IsSystem,
 	)
 	return i, err
 }
@@ -201,6 +232,31 @@ func (q *Queries) GetBalance(ctx context.Context, id pgtype.UUID) (int64, error)
 	var balance int64
 	err := row.Scan(&balance)
 	return balance, err
+}
+
+const getSettlementAccountForUpdate = `-- name: GetSettlementAccountForUpdate :one
+SELECT id, name, balance, created_at, updated_at, deleted_at, phone, is_system
+FROM accounts
+WHERE name = 'Settlement Account'
+  AND is_system = TRUE
+  AND deleted_at IS NULL
+FOR UPDATE
+`
+
+func (q *Queries) GetSettlementAccountForUpdate(ctx context.Context) (Account, error) {
+	row := q.db.QueryRow(ctx, getSettlementAccountForUpdate)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Balance,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Phone,
+		&i.IsSystem,
+	)
+	return i, err
 }
 
 const getTransactions = `-- name: GetTransactions :many

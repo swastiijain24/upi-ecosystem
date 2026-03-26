@@ -24,18 +24,29 @@ SELECT * FROM accounts
 WHERE id = $1 AND deleted_at IS NULL
 FOR UPDATE;
 
+
+-- name: GetSettlementAccountForUpdate :one
+SELECT *
+FROM accounts
+WHERE name = 'Settlement Account'
+  AND is_system = TRUE
+  AND deleted_at IS NULL
+FOR UPDATE;
+
 -- name: CheckIdempotencyKey :one 
 SELECT * FROM idempotency_keys WHERE key = $1;
 
 -- name: CreateLedgerEntry :exec
 INSERT INTO ledger_entries (
+    transaction_id,
     account_id,
     type,
-    amount,
+    debit,
+    credit,
     balance_after,
     description
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6, $7
 );
 
 -- name: CreateTransaction :one
@@ -75,3 +86,22 @@ SET status = $2,
     updated_at = NOW()
 WHERE id = $1
   AND status != $2;
+
+
+
+-- name: CreateSettlementAccount :exec
+INSERT INTO accounts (
+    name,
+    phone,
+    is_system
+)
+SELECT 
+    'Settlement Account',
+    'SYSTEM',
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1 
+    FROM accounts 
+    WHERE is_system = TRUE 
+      AND name = 'Settlement Account'
+);
