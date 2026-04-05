@@ -28,7 +28,8 @@ func Initialize(r *gin.Engine, conn *pgx.Conn) {
 	idempotencyMiddleware := idempotency.NewIdempotencyMiddleware(*redisStore) 
 
 	keyAuth := apiAuth.NewKeyAuth()
-	apiAuthMiddleware := apiAuth.NewApiAuthMiddleware(keyAuth, repository)
+	apiKeyService := services.NewApiKeyService(repository)
+	apiAuthMiddleware := apiAuth.NewApiAuthMiddleware(keyAuth, apiKeyService)
 
 	routes.RegisterAccountRoutes(r, accountHandler)
 	routes.RegisterTransactionRoutes(r, apiAuthMiddleware, idempotencyMiddleware, transactionHandler)

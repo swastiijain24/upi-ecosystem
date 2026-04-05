@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	repo "github.com/swastiijain24/bank-management/internals/repositories"
+	"github.com/swastiijain24/bank-management/internals/services"
 )
 
 type contextKey string
@@ -18,13 +18,13 @@ const (
 
 type APIMiddleware struct {
 	keyAuth *KeyAuth
-	repo    repo.Querier
+	apiKeyService services.ApiKeyService
 }
 
-func NewApiAuthMiddleware(keyAuth *KeyAuth, repo repo.Querier) *APIMiddleware {
+func NewApiAuthMiddleware(keyAuth *KeyAuth, apiKeyService services.ApiKeyService) *APIMiddleware {
 	return &APIMiddleware{
 		keyAuth: keyAuth,
-		repo:    repo,
+		apiKeyService: apiKeyService,
 	}
 }
 
@@ -46,7 +46,7 @@ func (m *APIMiddleware) ApiAuthentication() gin.HandlerFunc {
 		_, randomPart, _ := m.keyAuth.ParseKey(apiKey)
 		keyID := randomPart[:8]
 
-		key, err := m.repo.GetAPIKeyByKeyID(c, keyID)
+		key, err := m.apiKeyService.GetAPIKeyByKeyID(c, keyID)
 		if err != nil {
 			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid API key"})
 			return
@@ -58,7 +58,7 @@ func (m *APIMiddleware) ApiAuthentication() gin.HandlerFunc {
 			return
 		}
 
-		IsActive, err := m.repo.IsValid(c, key.KeyID)
+		IsActive, err := m.apiKeyService.IsValid(c, key.KeyID)
 		if !IsActive || time.Now().After(key.ExpiresAt.Time) {
 
 			c.AbortWithStatusJSON(401, gin.H{"error": "API key is no longer valid"})
@@ -72,7 +72,7 @@ func (m *APIMiddleware) ApiAuthentication() gin.HandlerFunc {
 		}
 
 		go func() {
-			_ = m.repo.UpdateAPIKeyLastUsed(context.Background(), key.KeyID)
+			_ = m.apiKeyService.UpdateAPIKeyLastUsed(context.Background(), key.KeyID)
 		}()
 
 		c.Set(APIKeyContextKey, key)
