@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -12,8 +13,9 @@ import (
 
 func NewRedis() *redis.Client{
 
+	redisAddr := os.Getenv("REDIS_ADDR")
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: redisAddr,
 	})
 	_, err := redisClient.Ping(context.Background()).Result()
 	if err != nil{

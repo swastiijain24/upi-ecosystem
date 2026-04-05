@@ -23,6 +23,7 @@ type Querier interface {
 	GetAccountForUpdate(ctx context.Context, id pgtype.UUID) (Account, error)
 	GetBalance(ctx context.Context, id pgtype.UUID) (int64, error)
 	GetSettlementAccountForUpdate(ctx context.Context) (Account, error)
+	GetTransactionById(ctx context.Context, id pgtype.UUID) (Transaction, error)
 	GetTransactions(ctx context.Context, fromAccountID string) ([]Transaction, error)
 	IsValid(ctx context.Context, keyID string) (bool, error)
 	UpdateAPIKeyLastUsed(ctx context.Context, keyID string) error

@@ -168,8 +168,8 @@ func (q *Queries) GetSettlementAccountForUpdate(ctx context.Context) (Account, e
 }
 
 const updateAccountBalance = `-- name: UpdateAccountBalance :exec
-UPDATE accounts
-SET balance = $2
+UPDATE accounts 
+SET balance = $2, updated_at = NOW() 
 WHERE id = $1
 `
 
@@ -180,23 +180,5 @@ type UpdateAccountBalanceParams struct {
 
 func (q *Queries) UpdateAccountBalance(ctx context.Context, arg UpdateAccountBalanceParams) error {
 	_, err := q.db.Exec(ctx, updateAccountBalance, arg.ID, arg.Balance)
-	return err
-}
-
-const updatePaymentStatus = `-- name: UpdatePaymentStatus :exec
-UPDATE transactions
-SET status = $2,
-    updated_at = NOW()
-WHERE id = $1
-  AND status != $2
-`
-
-type UpdatePaymentStatusParams struct {
-	ID     pgtype.UUID `json:"id"`
-	Status string      `json:"status"`
-}
-
-func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) error {
-	_, err := q.db.Exec(ctx, updatePaymentStatus, arg.ID, arg.Status)
 	return err
 }

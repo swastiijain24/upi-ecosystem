@@ -20,7 +20,7 @@ func (h *AccountHandler) GetAccountById(c *gin.Context){
 	
 	account, err := h.accountService.GetAccountById(c.Request.Context(), id)
 	if err!= nil{
-		c.JSON(400, gin.H{"error":err.Error()})
+		c.JSON(404, gin.H{"error":err.Error()})
 		return
 	}
 
@@ -37,7 +37,7 @@ func (h *AccountHandler) CreateAccount(c *gin.Context){
 
 	account, err:= h.accountService.CreateAccount(c.Request.Context(), accountDetails.Name, accountDetails.Phone)
 	if err !=nil{
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(201, account)
@@ -59,9 +59,9 @@ func (h *AccountHandler) GetBalance(c *gin.Context){
 func (h *AccountHandler) DeleteAccount(c *gin.Context){
 	id := c.Param("id")
 
-	err := h.accountService.DeleteAccount(c, id)
+	err := h.accountService.DeleteAccount(c.Request.Context(), id)
 	if err!=nil{
-		c.JSON(400, gin.H{"error":err.Error()})
+		c.JSON(500, gin.H{"error":err.Error()})
 		return 
 	}
 	c.JSON(204, nil)

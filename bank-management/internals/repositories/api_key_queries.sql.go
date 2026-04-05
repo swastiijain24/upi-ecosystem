@@ -110,9 +110,10 @@ func (q *Queries) GetAPIKeyByKeyID(ctx context.Context, keyID string) (ApiKey, e
 
 const isValid = `-- name: IsValid :one
 SELECT EXISTS (
-    SELECT 1
-    FROM api_keys
+    SELECT 1 FROM api_keys
     WHERE key_id = $1
+      AND is_active = TRUE
+      AND (expires_at IS NULL OR expires_at > NOW())
 )
 `
 

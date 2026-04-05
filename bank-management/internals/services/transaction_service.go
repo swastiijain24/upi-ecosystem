@@ -3,7 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	repo "github.com/swastiijain24/bank-management/internals/repositories"
 	"github.com/swastiijain24/bank-management/internals/utils"
@@ -17,10 +18,10 @@ type TransactionService interface {
 
 type txnsvc struct {
 	repo repo.Querier
-	db   *pgx.Conn
+	db   *pgxpool.Pool
 }
 
-func NewTransactionService(repo repo.Querier, db *pgx.Conn) TransactionService {
+func NewTransactionService(repo repo.Querier, db *pgxpool.Pool) TransactionService {
 	return &txnsvc{
 		repo: repo,
 		db:   db,
@@ -68,6 +69,7 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 	}
 
 	newBalance := account.Balance - Amount
+	newSettlementAccountBalance := settlementAccount.Balance + Amount
 
 	ledgerParams := repo.CreateLedgerEntryParams{
 		TransactionID: transaction.ID,
@@ -89,7 +91,7 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 		Type:          "CREDIT",
 		Credit:        Amount,
 		Debit:         0,
-		BalanceAfter:  newBalance,
+		BalanceAfter:  newSettlementAccountBalance,
 		Description:   utils.ToPGText("settlement account"),
 	}
 
@@ -106,6 +108,15 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 		return repo.Transaction{}, err
 	}
 
+	settlementUpdatedParamsObj := repo.UpdateAccountBalanceParams{
+		Balance: newSettlementAccountBalance,
+		ID: settlementAccount.ID,
+	}
+
+	if err := qtx.UpdateAccountBalance(ctx, settlementUpdatedParamsObj); err != nil {
+		return repo.Transaction{}, err
+	}
+
 	transactionStatusParams := repo.UpdatePaymentStatusParams{
 		ID:     transaction.ID,
 		Status: "SUCCESS",
@@ -115,15 +126,23 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 		return repo.Transaction{}, err
 	}
 
+	finalTransaction, err := qtx.GetTransactionById(ctx, transaction.ID)
+	if err != nil{
+		return repo.Transaction{}, err
+	}
+
 	if err := dbTx.Commit(ctx); err != nil {
 		return repo.Transaction{}, err
 	}
-	return transaction, nil
+	return finalTransaction, nil
 
 }
 
 func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error) {
 
+	if Amount <= 0 {
+		return repo.Transaction{}, fmt.Errorf("invalid amount")
+	}
 
 	dbTx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -156,6 +175,7 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 	}
 
 	newBalance := account.Balance + Amount
+	newSettlementAccountBalance := settlementAccount.Balance - Amount 
 
 	ledgerParams := repo.CreateLedgerEntryParams{
 		TransactionID: transaction.ID,
@@ -177,7 +197,7 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 		Type:          "DEBIT",
 		Debit:         Amount,
 		Credit:        0,
-		BalanceAfter:  newBalance,
+		BalanceAfter:  newSettlementAccountBalance,
 		Description:   utils.ToPGText("settlement account"),
 	}
 
@@ -194,6 +214,15 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 		return repo.Transaction{}, err
 	}
 
+	settlementUpdatedParamsObj := repo.UpdateAccountBalanceParams{
+		Balance: newSettlementAccountBalance,
+		ID:      settlementAccount.ID,
+	}
+
+	if err := qtx.UpdateAccountBalance(ctx, settlementUpdatedParamsObj); err != nil {
+		return repo.Transaction{}, err
+	}
+
 	transactionStatusParams := repo.UpdatePaymentStatusParams{
 		ID:     transaction.ID,
 		Status: "SUCCESS",
@@ -203,10 +232,16 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 		return repo.Transaction{}, err
 	}
 
+	finalTransaction, err := qtx.GetTransactionById(ctx, transaction.ID)
+	if err != nil{
+		return repo.Transaction{}, err
+	}
+	
+
 	if err := dbTx.Commit(ctx); err != nil {
 		return repo.Transaction{}, err
 	}
-	return transaction, nil
+	return finalTransaction, nil
 }
 
 func (s *txnsvc) GetTransactions(ctx context.Context, accountID string) ([]repo.Transaction, error) {

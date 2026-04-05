@@ -28,9 +28,10 @@ FOR UPDATE;
 
 
 -- name: UpdateAccountBalance :exec
-UPDATE accounts
-SET balance = $2
+UPDATE accounts 
+SET balance = $2, updated_at = NOW() 
 WHERE id = $1;
+
 
 
 -- name: DeleteAccount :exec
@@ -39,14 +40,6 @@ SET deleted_at = NOW(),
     updated_at = NOW()
 WHERE id = $1
   AND deleted_at IS NULL;
-
-
--- name: UpdatePaymentStatus :exec
-UPDATE transactions
-SET status = $2,
-    updated_at = NOW()
-WHERE id = $1
-  AND status != $2;
 
 
 -- name: CreateSettlementAccount :exec

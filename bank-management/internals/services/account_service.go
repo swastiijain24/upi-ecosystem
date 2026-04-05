@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	repo "github.com/swastiijain24/bank-management/internals/repositories"
 	"github.com/swastiijain24/bank-management/internals/utils"
 )
@@ -19,10 +19,10 @@ type AccountService interface {
 
 type accsvc struct {
 	repo repo.Querier
-	db   *pgx.Conn
+	db   *pgxpool.Pool
 }
 
-func NewAccountService(repo repo.Querier, db *pgx.Conn) AccountService {
+func NewAccountService(repo repo.Querier, db *pgxpool.Pool) AccountService {
 	return &accsvc{
 		repo: repo,
 		db:   db,

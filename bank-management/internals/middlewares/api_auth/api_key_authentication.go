@@ -10,20 +10,16 @@ import (
 	"github.com/swastiijain24/bank-management/internals/services"
 )
 
-type contextKey string
-
-const (
-	APIKeyContextKey contextKey = "api_key"
-)
+const APIKeyContextKey = "api_key"
 
 type APIMiddleware struct {
-	keyAuth *KeyAuth
+	keyAuth       *KeyAuth
 	apiKeyService services.ApiKeyService
 }
 
 func NewApiAuthMiddleware(keyAuth *KeyAuth, apiKeyService services.ApiKeyService) *APIMiddleware {
 	return &APIMiddleware{
-		keyAuth: keyAuth,
+		keyAuth:       keyAuth,
 		apiKeyService: apiKeyService,
 	}
 }
@@ -43,7 +39,11 @@ func (m *APIMiddleware) ApiAuthentication() gin.HandlerFunc {
 			return
 		}
 
-		_, randomPart, _ := m.keyAuth.ParseKey(apiKey)
+		_, randomPart, err := m.keyAuth.ParseKey(apiKey)
+		if err != nil || len(randomPart) < 8 {
+			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid API key"})
+			return
+		}
 		keyID := randomPart[:8]
 
 		key, err := m.apiKeyService.GetAPIKeyByKeyID(c, keyID)
@@ -59,7 +59,12 @@ func (m *APIMiddleware) ApiAuthentication() gin.HandlerFunc {
 		}
 
 		IsActive, err := m.apiKeyService.IsValid(c, key.KeyID)
-		if !IsActive || time.Now().After(key.ExpiresAt.Time) {
+		if err != nil {
+			c.AbortWithStatusJSON(500, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		if !IsActive || (key.ExpiresAt.Valid && time.Now().After(key.ExpiresAt.Time)) {
 
 			c.AbortWithStatusJSON(401, gin.H{"error": "API key is no longer valid"})
 			return

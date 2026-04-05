@@ -7,6 +7,8 @@ package repo
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createTransaction = `-- name: CreateTransaction :one
@@ -35,6 +37,27 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		arg.Amount,
 		arg.Status,
 	)
+	var i Transaction
+	err := row.Scan(
+		&i.ID,
+		&i.FromAccountID,
+		&i.ToAccountIdentifier,
+		&i.Amount,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getTransactionById = `-- name: GetTransactionById :one
+SELECT id, from_account_id, to_account_identifier, amount, status, created_at, updated_at 
+FROM transactions 
+WHERE ID = $1
+`
+
+func (q *Queries) GetTransactionById(ctx context.Context, id pgtype.UUID) (Transaction, error) {
+	row := q.db.QueryRow(ctx, getTransactionById, id)
 	var i Transaction
 	err := row.Scan(
 		&i.ID,
@@ -81,4 +104,22 @@ func (q *Queries) GetTransactions(ctx context.Context, fromAccountID string) ([]
 		return nil, err
 	}
 	return items, nil
+}
+
+const updatePaymentStatus = `-- name: UpdatePaymentStatus :exec
+UPDATE transactions
+SET status = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND status != $2
+`
+
+type UpdatePaymentStatusParams struct {
+	ID     pgtype.UUID `json:"id"`
+	Status string      `json:"status"`
+}
+
+func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) error {
+	_, err := q.db.Exec(ctx, updatePaymentStatus, arg.ID, arg.Status)
+	return err
 }
