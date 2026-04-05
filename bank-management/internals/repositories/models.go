@@ -11,31 +11,36 @@ import (
 type Account struct {
 	ID        pgtype.UUID        `json:"id"`
 	Name      string             `json:"name"`
+	Phone     string             `json:"phone"`
 	Balance   int64              `json:"balance"`
+	IsSystem  bool               `json:"is_system"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
-	Phone     string             `json:"phone"`
-	IsSystem  bool               `json:"is_system"`
 }
 
-type IdempotencyKey struct {
-	Key          string             `json:"key"`
-	ResponseCode pgtype.Int4        `json:"response_code"`
-	ResponseBody []byte             `json:"response_body"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+type ApiKey struct {
+	ID         pgtype.UUID        `json:"id"`
+	KeyID      string             `json:"key_id"`
+	KeyHash    string             `json:"key_hash"`
+	Client     string             `json:"client"`
+	AllowedIps []string           `json:"allowed_ips"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
+	LastUsedAt pgtype.Timestamptz `json:"last_used_at"`
+	IsActive   bool               `json:"is_active"`
 }
 
 type LedgerEntry struct {
 	ID            pgtype.UUID        `json:"id"`
 	AccountID     pgtype.UUID        `json:"account_id"`
+	TransactionID pgtype.UUID        `json:"transaction_id"`
 	Type          string             `json:"type"`
+	Debit         int64              `json:"debit"`
+	Credit        int64              `json:"credit"`
 	BalanceAfter  int64              `json:"balance_after"`
 	Description   pgtype.Text        `json:"description"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	TransactionID pgtype.UUID        `json:"transaction_id"`
-	Debit         int64              `json:"debit"`
-	Credit        int64              `json:"credit"`
 }
 
 type Transaction struct {

@@ -29,11 +29,6 @@ func NewTransactionService(repo repo.Querier, db *pgx.Conn) TransactionService {
 
 func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error) {
 
-	// _, err := s.repo.CheckIdempotencyKey(key)
-	// if err == nil {
-	// 	return repo.Transaction{}, fmt.Errorf("request already initiated")
-	// }
-
 	if Amount <= 0 {
 		return repo.Transaction{}, fmt.Errorf("invalid amount")
 	}
@@ -129,10 +124,6 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 
 func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error) {
 
-	// _, err := s.repo.CheckIdempotencyKey(key)
-	// if err == nil {
-	// 	return repo.Transaction{}, fmt.Errorf("request already initiated")
-	// }
 
 	dbTx, err := s.db.Begin(ctx)
 	if err != nil {

@@ -1,4 +1,4 @@
-package middlewares
+package idempotency
 
 import (
 	"bytes"
@@ -49,7 +49,7 @@ func (w *ginResponseWriter) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-func (m *IdempotencyMiddleware) IdempotencyMiddleware() gin.HandlerFunc {
+func (m *IdempotencyMiddleware) IdempotencyCheck() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead {

@@ -6,7 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/swastiijain24/bank-management/internals/handlers"
-	"github.com/swastiijain24/bank-management/internals/middlewares"
+	apiAuth "github.com/swastiijain24/bank-management/internals/middlewares/api_auth"
+	"github.com/swastiijain24/bank-management/internals/middlewares/idempotency"
 	repo "github.com/swastiijain24/bank-management/internals/repositories"
 	"github.com/swastiijain24/bank-management/internals/routes"
 	"github.com/swastiijain24/bank-management/internals/services"
@@ -22,11 +23,14 @@ func Initialize(r *gin.Engine, conn *pgx.Conn) {
 	accountHandler := handlers.NewAccountHandler(accountService)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
-	redisClient := middlewares.NewRedis()
-	redisStore := middlewares.NewRedisStore(redisClient, 24*time.Hour)
-	idempotencyMiddleware := middlewares.NewIdempotencyMiddleware(*redisStore)
+	redisClient := idempotency.NewRedis()
+	redisStore := idempotency.NewRedisStore(redisClient, 24*time.Hour)
+	idempotencyMiddleware := idempotency.NewIdempotencyMiddleware(*redisStore) 
+
+	keyAuth := apiAuth.NewKeyAuth()
+	apiAuthMiddleware := apiAuth.NewApiAuthMiddleware(keyAuth, repository)
 
 	routes.RegisterAccountRoutes(r, accountHandler)
-	routes.RegisterTransactionRoutes(r, idempotencyMiddleware, transactionHandler)
+	routes.RegisterTransactionRoutes(r, apiAuthMiddleware, idempotencyMiddleware, transactionHandler)
 
 }

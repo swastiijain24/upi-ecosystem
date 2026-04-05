@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
-	
 )
 
 func main() {
@@ -20,10 +19,10 @@ func main() {
 
 	ctx := context.Background()
 	dsn := os.Getenv("GOOSE_DBSTRING")
-	
+
 	conn, err := pgx.Connect(ctx, dsn)
 	if err != nil {
-		panic(err) 
+		panic(err)
 	}
 	defer conn.Close(ctx)
 
@@ -39,11 +38,16 @@ func main() {
 
 	port := os.Getenv("PORT")
 
-	if port == ""{
+	if port == "" {
 		port = "8080"
 	}
 
 	log.Printf("server running")
-	r.Run(":" + port)
+
+	certFile := os.Getenv("TLS_CERT_FILE")
+	keyFile := os.Getenv("TLS_KEY_FILE")
+	
+	r.RunTLS(":" + port, certFile, keyFile)
+
 
 }

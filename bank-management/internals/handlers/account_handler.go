@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/swastiijain24/bank-management/internals/dtos"
 	"github.com/swastiijain24/bank-management/internals/services"
 )
 
@@ -29,7 +28,7 @@ func (h *AccountHandler) GetAccountById(c *gin.Context){
 }
 
 func (h *AccountHandler) CreateAccount(c *gin.Context){
-	var accountDetails dtos.CreateAccountReq
+	var accountDetails CreateAccountReq
 
 	if err:= c.ShouldBindJSON(&accountDetails); err !=nil{
 		c.JSON(400, gin.H{"error": err.Error()})
@@ -66,4 +65,10 @@ func (h *AccountHandler) DeleteAccount(c *gin.Context){
 		return 
 	}
 	c.JSON(204, nil)
+}
+
+
+type CreateAccountReq struct{
+	Name    string `json:"name"`
+	Phone   string `json:"phone"`
 }

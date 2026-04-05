@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/swastiijain24/bank-management/internals/dtos"
 	"github.com/swastiijain24/bank-management/internals/services"
 )
 
@@ -18,7 +17,7 @@ func NewTransactionHandler(s services.TransactionService) *TransactionHandler {
 
 
 func (h *TransactionHandler) Debit(c *gin.Context){
-	var debitReq dtos.DebitCreditRequest
+	var debitReq DebitCreditRequest
 	if err:= c.ShouldBindJSON(&debitReq); err!= nil{
 		c.JSON(400, gin.H{"error":err.Error()})
 		return
@@ -34,7 +33,7 @@ func (h *TransactionHandler) Debit(c *gin.Context){
 
 
 func (h *TransactionHandler) Credit(c *gin.Context){
-	var creditReq dtos.DebitCreditRequest
+	var creditReq DebitCreditRequest
 	if err := c.ShouldBindJSON(&creditReq); err!=nil{
 		c.JSON(400, gin.H{"error": err.Error()})
 		return 
@@ -58,4 +57,12 @@ func (h *TransactionHandler) GetTransactions(c *gin.Context){
 	}
 	c.JSON(200, transactions)
 
+}
+
+
+type DebitCreditRequest struct {
+	FromAccountID string `json:"from_account_id"`
+	ToAccountId string `json:"to_account_id"`
+	Amount    int64  `json:"amount"`
+	Description string `json:"description"`
 }

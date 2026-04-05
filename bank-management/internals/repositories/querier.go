@@ -11,17 +11,21 @@ import (
 )
 
 type Querier interface {
-	CheckIdempotencyKey(ctx context.Context, key string) (IdempotencyKey, error)
+	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (ApiKey, error)
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error)
 	CreateLedgerEntry(ctx context.Context, arg CreateLedgerEntryParams) error
 	CreateSettlementAccount(ctx context.Context) error
 	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error)
+	DeactivateAPIKey(ctx context.Context, keyID string) error
 	DeleteAccount(ctx context.Context, id pgtype.UUID) error
+	GetAPIKeyByKeyID(ctx context.Context, keyID string) (ApiKey, error)
 	GetAccountByID(ctx context.Context, id pgtype.UUID) (Account, error)
 	GetAccountForUpdate(ctx context.Context, id pgtype.UUID) (Account, error)
 	GetBalance(ctx context.Context, id pgtype.UUID) (int64, error)
 	GetSettlementAccountForUpdate(ctx context.Context) (Account, error)
 	GetTransactions(ctx context.Context, fromAccountID string) ([]Transaction, error)
+	IsValid(ctx context.Context, keyID string) (bool, error)
+	UpdateAPIKeyLastUsed(ctx context.Context, keyID string) error
 	UpdateAccountBalance(ctx context.Context, arg UpdateAccountBalanceParams) error
 	UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) error
 }
