@@ -5,14 +5,13 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/swastiijain24/bank-management/internals/dtos"
 	repo "github.com/swastiijain24/bank-management/internals/repositories"
 	"github.com/swastiijain24/bank-management/internals/utils"
 )
 
 type AccountService interface {
 	GetAccountById(ctx context.Context, id string) (repo.Account, error)
-	CreateAccount(ctx context.Context, accountDetails dtos.CreateAccountReq) (repo.CreateAccountRow, error)
+	CreateAccount(ctx context.Context, Name string, Phone string) (repo.CreateAccountRow, error)
 	GetBalance(ctx context.Context, accountId string) (int64, error)
 	DeleteAccount(ctx context.Context, accountId string) error
 	CreateSettlementAccount(ctx context.Context) error 
@@ -34,21 +33,21 @@ func (s *accsvc) GetAccountById(ctx context.Context, id string) (repo.Account, e
 	return s.repo.GetAccountByID(ctx, utils.StringtoUUID(id))
 }
 
-func (s *accsvc) CreateAccount(ctx context.Context,  accountDetails dtos.CreateAccountReq) (repo.CreateAccountRow, error) {
+func (s *accsvc) CreateAccount(ctx context.Context, Name string, Phone string) (repo.CreateAccountRow, error) {
 
-	if accountDetails.Name == "" {
+	if Name == "" {
 		return repo.CreateAccountRow{}, fmt.Errorf("Name not given")
 
 	}
 
-	if accountDetails.Phone == "" {
+	if Phone == "" {
 		return repo.CreateAccountRow{}, fmt.Errorf("Phone not given")
 
 	}
 
 	accountParams := repo.CreateAccountParams{
-		Name:  accountDetails.Name,
-		Phone: accountDetails.Phone,
+		Name:  Name,
+		Phone: Phone,
 	}
 
 	account, err := s.repo.CreateAccount(ctx, accountParams)

@@ -36,7 +36,7 @@ func (h *AccountHandler) CreateAccount(c *gin.Context){
 		return
 	}
 
-	account, err:= h.accountService.CreateAccount(c.Request.Context(), accountDetails)
+	account, err:= h.accountService.CreateAccount(c.Request.Context(), accountDetails.Name, accountDetails.Phone)
 	if err !=nil{
 		c.JSON(400, gin.H{"error": err.Error()})
 		return

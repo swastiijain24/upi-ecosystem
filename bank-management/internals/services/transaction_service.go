@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/swastiijain24/bank-management/internals/dtos"
+
 	repo "github.com/swastiijain24/bank-management/internals/repositories"
 	"github.com/swastiijain24/bank-management/internals/utils"
 )
 
 type TransactionService interface {
-	Debit(ctx context.Context, debitDetails dtos.DebitCreditRequest) (repo.Transaction, error)
-	Credit(ctx context.Context, creditDetails dtos.DebitCreditRequest) (repo.Transaction, error)
+	Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error)
+	Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error)
 	GetTransactions(ctx context.Context, FromAccountId string) ([]repo.Transaction, error)
 }
 
@@ -27,14 +27,14 @@ func NewTransactionService(repo repo.Querier, db *pgx.Conn) TransactionService {
 	}
 }
 
-func (s *txnsvc) Debit(ctx context.Context,debitDetails dtos.DebitCreditRequest) (repo.Transaction, error) {
+func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error) {
 
 	// _, err := s.repo.CheckIdempotencyKey(key)
 	// if err == nil {
 	// 	return repo.Transaction{}, fmt.Errorf("request already initiated")
 	// }
 
-	if debitDetails.Amount <= 0 {
+	if Amount <= 0 {
 		return repo.Transaction{}, fmt.Errorf("invalid amount")
 	}
 
@@ -46,12 +46,12 @@ func (s *txnsvc) Debit(ctx context.Context,debitDetails dtos.DebitCreditRequest)
 
 	qtx := repo.New(dbTx)
 
-	account, err := qtx.GetAccountForUpdate(ctx, utils.StringtoUUID(debitDetails.FromAccountID))
+	account, err := qtx.GetAccountForUpdate(ctx, utils.StringtoUUID(FromAccountID))
 	if err != nil {
 		return repo.Transaction{}, err
 	}
 
-	if account.Balance < debitDetails.Amount {
+	if account.Balance < Amount {
 		return repo.Transaction{}, fmt.Errorf("insufficient balance")
 	}
 
@@ -61,9 +61,9 @@ func (s *txnsvc) Debit(ctx context.Context,debitDetails dtos.DebitCreditRequest)
 	}
 
 	txParamsObj := repo.CreateTransactionParams{
-		FromAccountID:       debitDetails.FromAccountID,
-		ToAccountIdentifier: debitDetails.ToAccountId,
-		Amount:              debitDetails.Amount,
+		FromAccountID:       FromAccountID,
+		ToAccountIdentifier: ToAccountId,
+		Amount:              Amount,
 		Status:              "PENDING",
 	}
 
@@ -72,16 +72,16 @@ func (s *txnsvc) Debit(ctx context.Context,debitDetails dtos.DebitCreditRequest)
 		return repo.Transaction{}, err
 	}
 
-	newBalance := account.Balance - debitDetails.Amount
+	newBalance := account.Balance - Amount
 
 	ledgerParams := repo.CreateLedgerEntryParams{
 		TransactionID: transaction.ID,
-		AccountID:    utils.StringtoUUID(debitDetails.FromAccountID),
-		Type:         "DEBIT",
-		Debit:       debitDetails.Amount,
-		Credit: 0,
-		BalanceAfter: newBalance,
-		Description:  utils.ToPGText(debitDetails.Description),
+		AccountID:     utils.StringtoUUID(FromAccountID),
+		Type:          "DEBIT",
+		Debit:         Amount,
+		Credit:        0,
+		BalanceAfter:  newBalance,
+		Description:   utils.ToPGText(Description),
 	}
 
 	if err := qtx.CreateLedgerEntry(ctx, ledgerParams); err != nil {
@@ -90,12 +90,12 @@ func (s *txnsvc) Debit(ctx context.Context,debitDetails dtos.DebitCreditRequest)
 
 	ledgerParamsSettlementAccount := repo.CreateLedgerEntryParams{
 		TransactionID: transaction.ID,
-		AccountID:    settlementAccount.ID,
-		Type:         "CREDIT",
-		Credit: debitDetails.Amount,
-		Debit:       0,
-		BalanceAfter: newBalance,
-		Description:  utils.ToPGText("settlement account"),
+		AccountID:     settlementAccount.ID,
+		Type:          "CREDIT",
+		Credit:        Amount,
+		Debit:         0,
+		BalanceAfter:  newBalance,
+		Description:   utils.ToPGText("settlement account"),
 	}
 
 	if err := qtx.CreateLedgerEntry(ctx, ledgerParamsSettlementAccount); err != nil {
@@ -104,7 +104,7 @@ func (s *txnsvc) Debit(ctx context.Context,debitDetails dtos.DebitCreditRequest)
 
 	updatedParamsObj := repo.UpdateAccountBalanceParams{
 		Balance: newBalance,
-		ID:      utils.StringtoUUID(debitDetails.FromAccountID),
+		ID:      utils.StringtoUUID(FromAccountID),
 	}
 
 	if err := qtx.UpdateAccountBalance(ctx, updatedParamsObj); err != nil {
@@ -112,14 +112,13 @@ func (s *txnsvc) Debit(ctx context.Context,debitDetails dtos.DebitCreditRequest)
 	}
 
 	transactionStatusParams := repo.UpdatePaymentStatusParams{
-		ID: transaction.ID,
+		ID:     transaction.ID,
 		Status: "SUCCESS",
 	}
 
-	if err := qtx.UpdatePaymentStatus(ctx, transactionStatusParams); err!=nil{
+	if err := qtx.UpdatePaymentStatus(ctx, transactionStatusParams); err != nil {
 		return repo.Transaction{}, err
 	}
-	
 
 	if err := dbTx.Commit(ctx); err != nil {
 		return repo.Transaction{}, err
@@ -128,7 +127,7 @@ func (s *txnsvc) Debit(ctx context.Context,debitDetails dtos.DebitCreditRequest)
 
 }
 
-func (s *txnsvc) Credit(ctx context.Context, creditDetails dtos.DebitCreditRequest) (repo.Transaction, error) {
+func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error) {
 
 	// _, err := s.repo.CheckIdempotencyKey(key)
 	// if err == nil {
@@ -143,7 +142,7 @@ func (s *txnsvc) Credit(ctx context.Context, creditDetails dtos.DebitCreditReque
 
 	qtx := repo.New(dbTx)
 
-	account, err := qtx.GetAccountForUpdate(ctx, utils.StringtoUUID(creditDetails.ToAccountId))
+	account, err := qtx.GetAccountForUpdate(ctx, utils.StringtoUUID(ToAccountId))
 	if err != nil {
 		return repo.Transaction{}, err
 	}
@@ -154,9 +153,9 @@ func (s *txnsvc) Credit(ctx context.Context, creditDetails dtos.DebitCreditReque
 	}
 
 	txParamsObj := repo.CreateTransactionParams{
-		FromAccountID:       creditDetails.FromAccountID,
-		ToAccountIdentifier: creditDetails.ToAccountId,
-		Amount:              creditDetails.Amount,
+		FromAccountID:       FromAccountID,
+		ToAccountIdentifier: ToAccountId,
+		Amount:              Amount,
 		Status:              "PENDING",
 	}
 
@@ -165,56 +164,51 @@ func (s *txnsvc) Credit(ctx context.Context, creditDetails dtos.DebitCreditReque
 		return repo.Transaction{}, err
 	}
 
-
-	newBalance := account.Balance + creditDetails.Amount
+	newBalance := account.Balance + Amount
 
 	ledgerParams := repo.CreateLedgerEntryParams{
 		TransactionID: transaction.ID,
-		AccountID:    utils.StringtoUUID(creditDetails.ToAccountId),
-		Type:         "CREDIT",
-		Credit:       creditDetails.Amount,
-		Debit: 0,
-		BalanceAfter: newBalance,
-		Description:  utils.ToPGText(creditDetails.Description),
+		AccountID:     utils.StringtoUUID(ToAccountId),
+		Type:          "CREDIT",
+		Credit:        Amount,
+		Debit:         0,
+		BalanceAfter:  newBalance,
+		Description:   utils.ToPGText(Description),
 	}
 
 	if err := qtx.CreateLedgerEntry(ctx, ledgerParams); err != nil {
 		return repo.Transaction{}, err
 	}
 
-
 	ledgerParamsSettlementAccount := repo.CreateLedgerEntryParams{
 		TransactionID: transaction.ID,
-		AccountID:    settlementAccount.ID,
-		Type:         "DEBIT",
-		Debit:       creditDetails.Amount,
-		Credit: 0,
-		BalanceAfter: newBalance,
-		Description:  utils.ToPGText("settlement account"),
+		AccountID:     settlementAccount.ID,
+		Type:          "DEBIT",
+		Debit:         Amount,
+		Credit:        0,
+		BalanceAfter:  newBalance,
+		Description:   utils.ToPGText("settlement account"),
 	}
 
 	if err := qtx.CreateLedgerEntry(ctx, ledgerParamsSettlementAccount); err != nil {
 		return repo.Transaction{}, err
 	}
 
-
 	updatedParamsObj := repo.UpdateAccountBalanceParams{
 		Balance: newBalance,
-		ID:      utils.StringtoUUID(creditDetails.ToAccountId),
+		ID:      utils.StringtoUUID(ToAccountId),
 	}
 
 	if err := qtx.UpdateAccountBalance(ctx, updatedParamsObj); err != nil {
 		return repo.Transaction{}, err
 	}
 
-
 	transactionStatusParams := repo.UpdatePaymentStatusParams{
-		ID: transaction.ID,
+		ID:     transaction.ID,
 		Status: "SUCCESS",
 	}
 
-
-	if err := qtx.UpdatePaymentStatus(ctx, transactionStatusParams); err!=nil{
+	if err := qtx.UpdatePaymentStatus(ctx, transactionStatusParams); err != nil {
 		return repo.Transaction{}, err
 	}
 

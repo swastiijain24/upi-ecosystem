@@ -24,9 +24,9 @@ func (h *TransactionHandler) Debit(c *gin.Context){
 		return
 	}
 
-	transaction, err := h.TransactionService.Debit(c.Request.Context(), debitReq)
+	transaction, err := h.TransactionService.Debit(c.Request.Context(), debitReq.FromAccountID, debitReq.ToAccountId, debitReq.Amount, debitReq.Description)
 	if err!=nil{
-		c.JSON(400, gin.H{"error":err.Error()})
+		c.JSON(500, gin.H{"error":err.Error()})
 		return
 	}
 	c.JSON(200, transaction)
@@ -39,7 +39,7 @@ func (h *TransactionHandler) Credit(c *gin.Context){
 		c.JSON(400, gin.H{"error": err.Error()})
 		return 
 	}
-	transaction, err:= h.TransactionService.Credit(c.Request.Context(), creditReq)
+	transaction, err:= h.TransactionService.Credit(c.Request.Context(), creditReq.FromAccountID, creditReq.ToAccountId, creditReq.Amount, creditReq.Description)
 	if err!=nil{
 		c.JSON(400, gin.H{"error":err.Error()})
 		return
