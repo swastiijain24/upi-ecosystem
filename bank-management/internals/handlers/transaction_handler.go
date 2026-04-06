@@ -61,8 +61,8 @@ func (h *TransactionHandler) GetTransactions(c *gin.Context){
 
 
 type DebitCreditRequest struct {
-	FromAccountID string `json:"from_account_id"`
-	ToAccountId string `json:"to_account_id"`
-	Amount    int64  `json:"amount"`
+	FromAccountID string `json:"from_account_id" binding:"required"`
+	ToAccountId string `json:"to_account_id" binding:"required"`
+	Amount    string  `json:"amount" binding:"required"`
 	Description string `json:"description"`
 }

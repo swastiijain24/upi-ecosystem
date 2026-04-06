@@ -11,6 +11,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const balanceFromEntries = `-- name: BalanceFromEntries :one
+SELECT CAST(
+    COALESCE(SUM(credit), 0) - COALESCE(SUM(debit), 0)
+    AS BIGINT
+) AS calculated_balance
+FROM ledger_entries
+WHERE account_id = $1
+`
+
+func (q *Queries) BalanceFromEntries(ctx context.Context, accountID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, balanceFromEntries, accountID)
+	var calculated_balance int64
+	err := row.Scan(&calculated_balance)
+	return calculated_balance, err
+}
+
 const createLedgerEntry = `-- name: CreateLedgerEntry :exec
 INSERT INTO ledger_entries (
     transaction_id,

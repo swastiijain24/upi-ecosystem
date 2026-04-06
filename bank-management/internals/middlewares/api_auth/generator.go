@@ -41,7 +41,7 @@ func (g *APIKeyGenerator) Generate() (fullKey string, keyID string, err error) {
 
 
 func (g *APIKeyGenerator) ParseKey(fullKey string) (prefix, version, randomPart string, err error){
-	parts := strings.Split(fullKey, "_")
+	parts := strings.SplitN(fullKey, "_", 3)
 	if len(parts)!= 3{
 		return "", "","", fmt.Errorf("invalid key format: expected 3 parts, got %d", len(parts))
 	}

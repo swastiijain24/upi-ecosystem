@@ -93,7 +93,7 @@ func (m *APIMiddleware) ApiAuthentication() gin.HandlerFunc {
 		}()
 
 
-		m.auditLogger.LogAuthSuccess(ctx, keyID, c.Request.RemoteAddr, c.Request.URL.RawPath)
+		m.auditLogger.LogAuthSuccess(ctx, keyID, c.Request.RemoteAddr, c.Request.URL.Path)
 
 		c.Set(APIKeyContextKey, key)
 

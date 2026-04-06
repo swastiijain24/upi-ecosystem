@@ -18,12 +18,13 @@ import (
 	"github.com/swastiijain24/bank-management/internals/services"
 )
 
-func Initialize(r *gin.Engine, pool *pgxpool.Pool, ctx context.Context) {
+func Initialize(r *gin.Engine, pool *pgxpool.Pool) {
 
 	repository := repo.New(pool)
 
 	accountService := services.NewAccountService(repository, pool)
 	transactionService := services.NewTransactionService(repository, pool)
+	// ledgerService := services.NewLedgerService(repository, accountService)
 
 	accountHandler := handlers.NewAccountHandler(accountService)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
@@ -32,21 +33,23 @@ func Initialize(r *gin.Engine, pool *pgxpool.Pool, ctx context.Context) {
 	redisStore := idempotency.NewRedisStore(redisClient, 24*time.Hour)
 	idempotencyMiddleware := idempotency.NewIdempotencyMiddleware(*redisStore)
 
-	APKIKeyHasher := apiAuth.NewAPIKeyHasher()
-	APIKeyGenetator := apiAuth.NewAPIKeyGenerator()
+	APIKeyHasher := apiAuth.NewAPIKeyHasher()
+	APIKeyGenerator := apiAuth.NewAPIKeyGenerator()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	auditLogger := audit.NewLogger(logger)
 
 	apiKeyService := services.NewApiKeyService(repository)
 	
-	apiAuthMiddleware := apiAuth.NewApiAuthMiddleware(APIKeyGenetator, APKIKeyHasher,auditLogger, apiKeyService)
+	apiAuthMiddleware := apiAuth.NewApiAuthMiddleware(APIKeyGenerator, APIKeyHasher ,auditLogger, apiKeyService)
 
 	routes.RegisterAccountRoutes(r, apiAuthMiddleware, accountHandler)
 	routes.RegisterTransactionRoutes(r, apiAuthMiddleware, idempotencyMiddleware, transactionHandler)
 
+	ctx := context.Background()
+
 	if err := accountService.CreateSettlementAccount(ctx); err != nil {
 		log.Fatal("Failed to create settlement account:", err)
 	}
-
+	
 }

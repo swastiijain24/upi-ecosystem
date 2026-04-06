@@ -32,8 +32,8 @@ func main() {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	log.Printf("intializing")
-	Initialize(r, pool, ctx)
+	log.Printf("initializing")
+	Initialize(r, pool)
 
 	log.Printf("initialized all")
 

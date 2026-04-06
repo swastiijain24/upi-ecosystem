@@ -67,8 +67,7 @@ func (h *AccountHandler) DeleteAccount(c *gin.Context){
 	c.JSON(204, nil)
 }
 
-
-type CreateAccountReq struct{
-	Name    string `json:"name"`
-	Phone   string `json:"phone"`
+type CreateAccountReq struct {
+    Name  string `json:"name" binding:"required,min=1,max=255"`
+    Phone string `json:"phone" binding:"required,e164"`  
 }

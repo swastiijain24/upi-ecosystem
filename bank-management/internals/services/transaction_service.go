@@ -11,8 +11,8 @@ import (
 )
 
 type TransactionService interface {
-	Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error)
-	Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error)
+	Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount string, Description string) (repo.Transaction, error)
+	Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount string, Description string) (repo.Transaction, error)
 	GetTransactions(ctx context.Context, FromAccountId string) ([]repo.Transaction, error)
 }
 
@@ -28,7 +28,12 @@ func NewTransactionService(repo repo.Querier, db *pgxpool.Pool) TransactionServi
 	}
 }
 
-func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error) {
+func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId string, AmountinString string, Description string) (repo.Transaction, error) {
+
+	Amount, err := utils.RupeesToPaise(AmountinString)
+	if err != nil {
+		return repo.Transaction{}, fmt.Errorf("error converting amount")
+	}
 
 	if Amount <= 0 {
 		return repo.Transaction{}, fmt.Errorf("invalid amount")
@@ -110,7 +115,7 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 
 	settlementUpdatedParamsObj := repo.UpdateAccountBalanceParams{
 		Balance: newSettlementAccountBalance,
-		ID: settlementAccount.ID,
+		ID:      settlementAccount.ID,
 	}
 
 	if err := qtx.UpdateAccountBalance(ctx, settlementUpdatedParamsObj); err != nil {
@@ -127,7 +132,7 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 	}
 
 	finalTransaction, err := qtx.GetTransactionById(ctx, transaction.ID)
-	if err != nil{
+	if err != nil {
 		return repo.Transaction{}, err
 	}
 
@@ -138,7 +143,12 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 
 }
 
-func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error) {
+func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId string, AmountinString string, Description string) (repo.Transaction, error) {
+
+	Amount, err := utils.RupeesToPaise(AmountinString)
+	if err != nil {
+		return repo.Transaction{}, fmt.Errorf("error converting amount")
+	}
 
 	if Amount <= 0 {
 		return repo.Transaction{}, fmt.Errorf("invalid amount")
@@ -175,7 +185,7 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 	}
 
 	newBalance := account.Balance + Amount
-	newSettlementAccountBalance := settlementAccount.Balance - Amount 
+	newSettlementAccountBalance := settlementAccount.Balance - Amount
 
 	ledgerParams := repo.CreateLedgerEntryParams{
 		TransactionID: transaction.ID,
@@ -233,10 +243,9 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 	}
 
 	finalTransaction, err := qtx.GetTransactionById(ctx, transaction.ID)
-	if err != nil{
+	if err != nil {
 		return repo.Transaction{}, err
 	}
-	
 
 	if err := dbTx.Commit(ctx); err != nil {
 		return repo.Transaction{}, err
