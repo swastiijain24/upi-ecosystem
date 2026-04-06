@@ -45,11 +45,13 @@ func main() {
 
 	log.Printf("server running")
 
-	certFile := os.Getenv("TLS_CERT_FILE")
-	keyFile := os.Getenv("TLS_KEY_FILE")
+	// certFile := os.Getenv("TLS_CERT_FILE")
+	// keyFile := os.Getenv("TLS_KEY_FILE")
 
-	if err := r.RunTLS(":"+port, certFile, keyFile); err != nil {
-		log.Fatal("Failed to start server:", err)
-	}
+	// if err := r.RunTLS(":"+port, certFile, keyFile); err != nil {
+	// 	log.Fatal("Failed to start server:", err)
+	// }
+
+	r.Run(":" + port)
 
 }
