@@ -14,15 +14,16 @@ type AccountService interface {
 	CreateAccount(ctx context.Context, Name string, Phone string) (repo.CreateAccountRow, error)
 	GetBalance(ctx context.Context, accountId string) (int64, error)
 	DeleteAccount(ctx context.Context, accountId string) error
-	CreateSettlementAccount(ctx context.Context) error 
+	CreateSettlementAccount(ctx context.Context) error
 }
 
 type accsvc struct {
-	repo repo.Querier
-	db   *pgxpool.Pool
+	repo          repo.Querier
+	db            *pgxpool.Pool
+	ledgerService LedgerService
 }
 
-func NewAccountService(repo repo.Querier, db *pgxpool.Pool) AccountService {
+func NewAccountService(repo repo.Querier, db *pgxpool.Pool, ledgerService LedgerService) AccountService {
 	return &accsvc{
 		repo: repo,
 		db:   db,
@@ -59,19 +60,33 @@ func (s *accsvc) CreateAccount(ctx context.Context, Name string, Phone string) (
 }
 
 func (s *accsvc) GetBalance(ctx context.Context, accountId string) (int64, error) {
-	return s.repo.GetBalance(ctx, utils.StringtoUUID(accountId))
+
+	stored, err := s.repo.GetBalance(ctx, utils.StringtoUUID(accountId))
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch balance: %w", err)
+	}
+
+	balanced, err := s.ledgerService.ReconcileAccount(ctx, accountId, stored)
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch balance: %w", err)
+	}
+	if !balanced {
+		return 0, fmt.Errorf("balance integrity check failed for account %s", accountId)
+	}
+
+	return stored, nil
 }
 
-func (s* accsvc) DeleteAccount(ctx context.Context, accountId string) error{
-	err := s.repo.DeleteAccount(ctx, utils.StringtoUUID(accountId)) 
-	if err !=nil{
+func (s *accsvc) DeleteAccount(ctx context.Context, accountId string) error {
+	err := s.repo.DeleteAccount(ctx, utils.StringtoUUID(accountId))
+	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s*accsvc) CreateSettlementAccount(ctx context.Context) error {
-	if err := s.repo.CreateSettlementAccount(ctx); err!=nil{
+func (s *accsvc) CreateSettlementAccount(ctx context.Context) error {
+	if err := s.repo.CreateSettlementAccount(ctx); err != nil {
 		return err
 	}
 	return nil

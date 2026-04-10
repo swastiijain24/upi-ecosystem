@@ -15,54 +15,50 @@ func NewTransactionHandler(s services.TransactionService) *TransactionHandler {
 	}
 }
 
-
-func (h *TransactionHandler) Debit(c *gin.Context){
+func (h *TransactionHandler) Debit(c *gin.Context) {
 	var debitReq DebitCreditRequest
-	if err:= c.ShouldBindJSON(&debitReq); err!= nil{
-		c.JSON(400, gin.H{"error":err.Error()})
+	if err := c.ShouldBindJSON(&debitReq); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
 	transaction, err := h.TransactionService.Debit(c.Request.Context(), debitReq.FromAccountID, debitReq.ToAccountId, debitReq.Amount, debitReq.Description)
-	if err!=nil{
-		c.JSON(400, gin.H{"error":err.Error()})
-		return
-	}
-	c.JSON(201, transaction)
-}
-
-
-func (h *TransactionHandler) Credit(c *gin.Context){
-	var creditReq DebitCreditRequest
-	if err := c.ShouldBindJSON(&creditReq); err!=nil{
+	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
-		return 
-	}
-	transaction, err:= h.TransactionService.Credit(c.Request.Context(), creditReq.FromAccountID, creditReq.ToAccountId, creditReq.Amount, creditReq.Description)
-	if err!=nil{
-		c.JSON(400, gin.H{"error":err.Error()})
 		return
 	}
 	c.JSON(201, transaction)
 }
 
+func (h *TransactionHandler) Credit(c *gin.Context) {
+	var creditReq DebitCreditRequest
+	if err := c.ShouldBindJSON(&creditReq); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	transaction, err := h.TransactionService.Credit(c.Request.Context(), creditReq.FromAccountID, creditReq.ToAccountId, creditReq.Amount, creditReq.Description)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(201, transaction)
+}
 
-func (h *TransactionHandler) GetTransactions(c *gin.Context){
+func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	transactions, err := h.TransactionService.GetTransactions(c.Request.Context(), id)
-	if err!= nil{
-		c.JSON(500, gin.H{"error":err.Error()})
-		return 
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
 	}
 	c.JSON(200, transactions)
 
 }
 
-
 type DebitCreditRequest struct {
 	FromAccountID string `json:"from_account_id" binding:"required"`
-	ToAccountId string `json:"to_account_id" binding:"required"`
-	Amount    string  `json:"amount" binding:"required"`
-	Description string `json:"description"`
+	ToAccountId   string `json:"to_account_id" binding:"required"`
+	Amount        int64  `json:"amount" binding:"required"`
+	Description   string `json:"description"`
 }

@@ -3,44 +3,35 @@ package services
 import (
 	"context"
 	"fmt"
+
 	repo "github.com/swastiijain24/bank-management/internals/repositories"
+	"github.com/swastiijain24/bank-management/internals/utils"
 )
 
 type LedgerService interface {
-	ReconcileAccount(ctx context.Context, accountID string) (bool, error)
+	ReconcileAccount(ctx context.Context, accountId string, storedBalance int64) (bool, error)
 }
 
 type ledgersvc struct {
-	repo repo.Querier
-	accountService AccountService
+	repo           repo.Querier
 }
 
-func NewLedgerService(repo repo.Querier, accountService AccountService) LedgerService {
+func NewLedgerService(repo repo.Querier) LedgerService {
 	return &ledgersvc{
-		repo: repo,
-		accountService: accountService,
+		repo:           repo,
 	}
 }
 
-func (s *ledgersvc) ReconcileAccount(ctx context.Context, accountID string) (bool, error) {
-	account, err := s.accountService.GetAccountById(ctx, accountID)
-	if err != nil {
-		return false, fmt.Errorf("account not found: %w", err)
-	}
+func (s *ledgersvc) ReconcileAccount(ctx context.Context, accountId string, storedBalance int64) (bool, error) {
 
-	calculated, err := s.repo.BalanceFromEntries(ctx, account.ID)
+	calculated, err := s.repo.BalanceFromEntries(ctx, utils.StringtoUUID(accountId))
 	if err != nil {
 		return false, fmt.Errorf("failed to calculate balance: %w", err)
 	}
 
-	stored, err := s.accountService.GetBalance(ctx, accountID)
-	if err != nil {
-		return false, fmt.Errorf("failed to fetch balance: %w", err)
-	}
-
-	if stored != calculated {
+	if storedBalance != calculated {
 		return false, fmt.Errorf("balance mismatch: stored %d, calculated %d",
-			stored, calculated)
+			storedBalance, calculated)
 	}
 	return true, nil
 }

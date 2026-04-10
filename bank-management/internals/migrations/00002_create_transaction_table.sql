@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    from_account_id TEXT NOT NULL,  -- changed directly to TEXT
+    from_account_id TEXT NOT NULL,  
     to_account_identifier TEXT NOT NULL,
 
     amount BIGINT NOT NULL CHECK (amount > 0),

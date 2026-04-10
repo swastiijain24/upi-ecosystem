@@ -22,9 +22,9 @@ func Initialize(r *gin.Engine, pool *pgxpool.Pool) {
 
 	repository := repo.New(pool)
 
-	accountService := services.NewAccountService(repository, pool)
+	ledgerService := services.NewLedgerService(repository)
+	accountService := services.NewAccountService(repository, pool, ledgerService)
 	transactionService := services.NewTransactionService(repository, pool)
-	// ledgerService := services.NewLedgerService(repository, accountService)
 
 	accountHandler := handlers.NewAccountHandler(accountService)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
