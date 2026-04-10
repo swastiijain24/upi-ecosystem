@@ -27,6 +27,7 @@ func NewAccountService(repo repo.Querier, db *pgxpool.Pool, ledgerService Ledger
 	return &accsvc{
 		repo: repo,
 		db:   db,
+		ledgerService: ledgerService,
 	}
 }
 
