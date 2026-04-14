@@ -30,14 +30,24 @@ type CreateTransactionParams struct {
 	Status              string `json:"status"`
 }
 
-func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error) {
+type CreateTransactionRow struct {
+	ID                  pgtype.UUID        `json:"id"`
+	FromAccountID       string             `json:"from_account_id"`
+	ToAccountIdentifier string             `json:"to_account_identifier"`
+	Amount              int64              `json:"amount"`
+	Status              string             `json:"status"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) (CreateTransactionRow, error) {
 	row := q.db.QueryRow(ctx, createTransaction,
 		arg.FromAccountID,
 		arg.ToAccountIdentifier,
 		arg.Amount,
 		arg.Status,
 	)
-	var i Transaction
+	var i CreateTransactionRow
 	err := row.Scan(
 		&i.ID,
 		&i.FromAccountID,
@@ -51,7 +61,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 }
 
 const getTransactionById = `-- name: GetTransactionById :one
-SELECT id, from_account_id, to_account_identifier, amount, status, created_at, updated_at 
+SELECT id, from_account_id, to_account_identifier, amount, status, created_at, updated_at, external_id 
 FROM transactions 
 WHERE ID = $1
 `
@@ -67,12 +77,13 @@ func (q *Queries) GetTransactionById(ctx context.Context, id pgtype.UUID) (Trans
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ExternalID,
 	)
 	return i, err
 }
 
 const getTransactions = `-- name: GetTransactions :many
-SELECT id, from_account_id, to_account_identifier, amount, status, created_at, updated_at
+SELECT id, from_account_id, to_account_identifier, amount, status, created_at, updated_at, external_id
 FROM transactions
 WHERE from_account_id = $1 or to_account_identifier = $1
 ORDER BY created_at DESC
@@ -95,6 +106,7 @@ func (q *Queries) GetTransactions(ctx context.Context, fromAccountID string) ([]
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}

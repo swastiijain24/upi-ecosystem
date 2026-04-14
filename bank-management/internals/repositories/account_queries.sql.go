@@ -86,7 +86,7 @@ func (q *Queries) DeleteAccount(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getAccountByID = `-- name: GetAccountByID :one
-SELECT id, name, phone, balance, is_system, created_at, updated_at, deleted_at
+SELECT id, name, phone, balance, is_system, created_at, updated_at, deleted_at, mpin_hash
 FROM accounts
 WHERE id = $1 AND deleted_at IS NULL
 `
@@ -103,12 +103,13 @@ func (q *Queries) GetAccountByID(ctx context.Context, id pgtype.UUID) (Account, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.MpinHash,
 	)
 	return i, err
 }
 
 const getAccountForUpdate = `-- name: GetAccountForUpdate :one
-SELECT id, name, phone, balance, is_system, created_at, updated_at, deleted_at FROM accounts
+SELECT id, name, phone, balance, is_system, created_at, updated_at, deleted_at, mpin_hash FROM accounts
 WHERE id = $1 AND deleted_at IS NULL
 FOR UPDATE
 `
@@ -125,6 +126,7 @@ func (q *Queries) GetAccountForUpdate(ctx context.Context, id pgtype.UUID) (Acco
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.MpinHash,
 	)
 	return i, err
 }
@@ -142,8 +144,22 @@ func (q *Queries) GetBalance(ctx context.Context, id pgtype.UUID) (int64, error)
 	return balance, err
 }
 
+const getMpinHash = `-- name: GetMpinHash :one
+SELECT mpin_hash 
+FROM accounts 
+WHERE id = $1 
+LIMIT 1
+`
+
+func (q *Queries) GetMpinHash(ctx context.Context, id pgtype.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getMpinHash, id)
+	var mpin_hash string
+	err := row.Scan(&mpin_hash)
+	return mpin_hash, err
+}
+
 const getSettlementAccountForUpdate = `-- name: GetSettlementAccountForUpdate :one
-SELECT id, name, phone, balance, is_system, created_at, updated_at, deleted_at
+SELECT id, name, phone, balance, is_system, created_at, updated_at, deleted_at, mpin_hash
 FROM accounts
 WHERE name = 'Settlement Account'
   AND is_system = TRUE
@@ -163,8 +179,27 @@ func (q *Queries) GetSettlementAccountForUpdate(ctx context.Context) (Account, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.MpinHash,
 	)
 	return i, err
+}
+
+const setMpinHash = `-- name: SetMpinHash :exec
+UPDATE accounts
+SET 
+    mpin_hash = $2,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+type SetMpinHashParams struct {
+	ID       pgtype.UUID `json:"id"`
+	MpinHash string      `json:"mpin_hash"`
+}
+
+func (q *Queries) SetMpinHash(ctx context.Context, arg SetMpinHashParams) error {
+	_, err := q.db.Exec(ctx, setMpinHash, arg.ID, arg.MpinHash)
+	return err
 }
 
 const updateAccountBalance = `-- name: UpdateAccountBalance :exec

@@ -16,17 +16,19 @@ type Querier interface {
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error)
 	CreateLedgerEntry(ctx context.Context, arg CreateLedgerEntryParams) error
 	CreateSettlementAccount(ctx context.Context) error
-	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error)
+	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (CreateTransactionRow, error)
 	DeactivateAPIKey(ctx context.Context, keyID string) error
 	DeleteAccount(ctx context.Context, id pgtype.UUID) error
 	GetAPIKeyByKeyID(ctx context.Context, keyID string) (ApiKey, error)
 	GetAccountByID(ctx context.Context, id pgtype.UUID) (Account, error)
 	GetAccountForUpdate(ctx context.Context, id pgtype.UUID) (Account, error)
 	GetBalance(ctx context.Context, id pgtype.UUID) (int64, error)
+	GetMpinHash(ctx context.Context, id pgtype.UUID) (string, error)
 	GetSettlementAccountForUpdate(ctx context.Context) (Account, error)
 	GetTransactionById(ctx context.Context, id pgtype.UUID) (Transaction, error)
 	GetTransactions(ctx context.Context, fromAccountID string) ([]Transaction, error)
 	IsValid(ctx context.Context, keyID string) (bool, error)
+	SetMpinHash(ctx context.Context, arg SetMpinHashParams) error
 	UpdateAPIKeyLastUsed(ctx context.Context, keyID string) error
 	UpdateAccountBalance(ctx context.Context, arg UpdateAccountBalanceParams) error
 	UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) error

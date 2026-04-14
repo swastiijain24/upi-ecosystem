@@ -33,7 +33,6 @@ SET balance = $2, updated_at = NOW()
 WHERE id = $1;
 
 
-
 -- name: DeleteAccount :exec
 UPDATE accounts
 SET deleted_at = NOW(),
@@ -66,3 +65,16 @@ WHERE name = 'Settlement Account'
   AND is_system = TRUE
   AND deleted_at IS NULL
 FOR UPDATE;
+
+-- name: SetMpinHash :exec
+UPDATE accounts
+SET 
+    mpin_hash = $2,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1;
+
+-- name: GetMpinHash :one
+SELECT mpin_hash 
+FROM accounts 
+WHERE id = $1 
+LIMIT 1;

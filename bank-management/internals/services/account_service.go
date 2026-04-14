@@ -11,7 +11,7 @@ import (
 
 type AccountService interface {
 	GetAccountById(ctx context.Context, id string) (repo.Account, error)
-	CreateAccount(ctx context.Context, Name string, Phone string) (repo.CreateAccountRow, error)
+	CreateAccount(ctx context.Context, Name string, Phone string, mpinHash string) (repo.CreateAccountRow, error)
 	GetBalance(ctx context.Context, accountId string) (int64, error)
 	DeleteAccount(ctx context.Context, accountId string) error
 	CreateSettlementAccount(ctx context.Context) error
@@ -31,11 +31,19 @@ func NewAccountService(repo repo.Querier, db *pgxpool.Pool, ledgerService Ledger
 	}
 }
 
+func (s *accsvc) SetAccountMPIN(ctx context.Context, accountID string, hashedMpin string) error {
+  
+    return s.repo.SetMpinHash(ctx, repo.SetMpinHashParams{
+        ID: utils.StringtoUUID(accountID),
+        MpinHash:  hashedMpin,
+    })
+}
+
 func (s *accsvc) GetAccountById(ctx context.Context, id string) (repo.Account, error) {
 	return s.repo.GetAccountByID(ctx, utils.StringtoUUID(id))
 }
 
-func (s *accsvc) CreateAccount(ctx context.Context, Name string, Phone string) (repo.CreateAccountRow, error) {
+func (s *accsvc) CreateAccount(ctx context.Context, Name string, Phone string, mpinHash string) (repo.CreateAccountRow, error) {
 
 	if Name == "" {
 		return repo.CreateAccountRow{}, fmt.Errorf("Name not given")
@@ -45,6 +53,10 @@ func (s *accsvc) CreateAccount(ctx context.Context, Name string, Phone string) (
 	if Phone == "" {
 		return repo.CreateAccountRow{}, fmt.Errorf("Phone not given")
 
+	}
+
+	if mpinHash == ""{
+		return repo.CreateAccountRow{}, fmt.Errorf("mpinHash not given")
 	}
 
 	accountParams := repo.CreateAccountParams{

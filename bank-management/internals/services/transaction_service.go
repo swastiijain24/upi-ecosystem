@@ -11,7 +11,7 @@ import (
 )
 
 type TransactionService interface {
-	Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error)
+	Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string, mpinHash string) (repo.Transaction, error)
 	Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error)
 	GetTransactions(ctx context.Context, FromAccountId string) ([]repo.Transaction, error)
 }
@@ -28,7 +28,7 @@ func NewTransactionService(repo repo.Querier, db *pgxpool.Pool) TransactionServi
 	}
 }
 
-func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error) {
+func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string, mpinHash string) (repo.Transaction, error) {
 
 	if Amount <= 0 {
 		return repo.Transaction{}, fmt.Errorf("invalid amount")
@@ -45,6 +45,10 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 	account, err := qtx.GetAccountForUpdate(ctx, utils.StringtoUUID(FromAccountID))
 	if err != nil {
 		return repo.Transaction{}, err
+	}
+
+	if account.MpinHash != mpinHash {
+		return repo.Transaction{}, fmt.Errorf("invalid mpin")
 	}
 
 	if account.Balance < Amount {

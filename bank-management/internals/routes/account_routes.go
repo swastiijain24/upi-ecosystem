@@ -10,10 +10,10 @@ func RegisterAccountRoutes(r *gin.Engine,  apiAuthMiddleware* apiAuth.APIMiddlew
 
 	accountRoutes := r.Group("/accounts")
 	{
-		accountRoutes.POST("/",  apiAuthMiddleware.ApiAuthentication(), accountHandler.CreateAccount)
-		accountRoutes.GET("/:id",  apiAuthMiddleware.ApiAuthentication(), accountHandler.GetAccountById)
-		accountRoutes.GET("/:id/balance", apiAuthMiddleware.ApiAuthentication(), accountHandler.GetBalance)
-		accountRoutes.DELETE("/:id",  apiAuthMiddleware.ApiAuthentication(), accountHandler.DeleteAccount)
+		accountRoutes.POST("/",  accountHandler.CreateAccount)
+		accountRoutes.GET("/:id",  accountHandler.GetAccountById)
+		accountRoutes.GET("/:id/balance", accountHandler.GetBalance)
+		accountRoutes.DELETE("/:id",  accountHandler.DeleteAccount)
 	}
 }
 
