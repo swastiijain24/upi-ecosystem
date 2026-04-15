@@ -16,11 +16,12 @@ INSERT INTO transactions (
     from_account_id,
     to_account_identifier,
     amount,
-    status
+    status,
+    external_id
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3, $4, $5
 )
-RETURNING id, from_account_id, to_account_identifier, amount, status, created_at, updated_at
+RETURNING id, from_account_id, to_account_identifier, amount, status, created_at,external_id, updated_at
 `
 
 type CreateTransactionParams struct {
@@ -28,6 +29,7 @@ type CreateTransactionParams struct {
 	ToAccountIdentifier string `json:"to_account_identifier"`
 	Amount              int64  `json:"amount"`
 	Status              string `json:"status"`
+	ExternalID          string `json:"external_id"`
 }
 
 type CreateTransactionRow struct {
@@ -37,6 +39,7 @@ type CreateTransactionRow struct {
 	Amount              int64              `json:"amount"`
 	Status              string             `json:"status"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	ExternalID          string             `json:"external_id"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
@@ -46,6 +49,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		arg.ToAccountIdentifier,
 		arg.Amount,
 		arg.Status,
+		arg.ExternalID,
 	)
 	var i CreateTransactionRow
 	err := row.Scan(
@@ -55,6 +59,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		&i.Amount,
 		&i.Status,
 		&i.CreatedAt,
+		&i.ExternalID,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -79,6 +84,24 @@ func (q *Queries) GetTransactionById(ctx context.Context, id pgtype.UUID) (Trans
 		&i.UpdatedAt,
 		&i.ExternalID,
 	)
+	return i, err
+}
+
+const getTransactionStatusByExternalId = `-- name: GetTransactionStatusByExternalId :one
+SELECT Status, ID
+FROM transactions 
+WHERE external_id = $1
+`
+
+type GetTransactionStatusByExternalIdRow struct {
+	Status string      `json:"status"`
+	ID     pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) GetTransactionStatusByExternalId(ctx context.Context, externalID string) (GetTransactionStatusByExternalIdRow, error) {
+	row := q.db.QueryRow(ctx, getTransactionStatusByExternalId, externalID)
+	var i GetTransactionStatusByExternalIdRow
+	err := row.Scan(&i.Status, &i.ID)
 	return i, err
 }
 

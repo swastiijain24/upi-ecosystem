@@ -4,11 +4,12 @@ INSERT INTO transactions (
     from_account_id,
     to_account_identifier,
     amount,
-    status
+    status,
+    external_id
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3, $4, $5
 )
-RETURNING id, from_account_id, to_account_identifier, amount, status, created_at, updated_at;
+RETURNING id, from_account_id, to_account_identifier, amount, status, created_at,external_id, updated_at;
 
 
 -- name: GetTransactions :many
@@ -28,3 +29,8 @@ SET status = $2,
     updated_at = NOW()
 WHERE id = $1
   AND status != $2;
+
+-- name: GetTransactionStatusByExternalId :one
+SELECT Status, ID
+FROM transactions 
+WHERE external_id = $1 ;

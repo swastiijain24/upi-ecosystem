@@ -14,7 +14,7 @@ func RegisterTransactionRoutes(r *gin.Engine, apiAuthMiddleware* apiAuth.APIMidd
 		transactionRoutes.POST("/debit", apiAuthMiddleware.ApiAuthentication(), idempotencyMiddleware.IdempotencyCheck(), transactionHandler.Debit)
 		transactionRoutes.POST("/credit", apiAuthMiddleware.ApiAuthentication(), idempotencyMiddleware.IdempotencyCheck(), transactionHandler.Credit)
 		transactionRoutes.GET("/account/:id",apiAuthMiddleware.ApiAuthentication(),  transactionHandler.GetTransactions)
-
+		transactionRoutes.GET("/status/:external_id", apiAuthMiddleware.ApiAuthentication(), transactionHandler.GetStatusByExternalId)
 	}
 	
 }

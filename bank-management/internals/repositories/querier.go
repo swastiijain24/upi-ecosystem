@@ -26,6 +26,7 @@ type Querier interface {
 	GetMpinHash(ctx context.Context, id pgtype.UUID) (string, error)
 	GetSettlementAccountForUpdate(ctx context.Context) (Account, error)
 	GetTransactionById(ctx context.Context, id pgtype.UUID) (Transaction, error)
+	GetTransactionStatusByExternalId(ctx context.Context, externalID string) (GetTransactionStatusByExternalIdRow, error)
 	GetTransactions(ctx context.Context, fromAccountID string) ([]Transaction, error)
 	IsValid(ctx context.Context, keyID string) (bool, error)
 	SetMpinHash(ctx context.Context, arg SetMpinHashParams) error

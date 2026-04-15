@@ -11,9 +11,10 @@ import (
 )
 
 type TransactionService interface {
-	Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string, mpinHash string) (repo.Transaction, error)
-	Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error)
+	Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string, mpinHash string, externalId string) (repo.Transaction, error)
+	Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string, externalId string) (repo.Transaction, error)
 	GetTransactions(ctx context.Context, FromAccountId string) ([]repo.Transaction, error)
+	GetStatusByExternalId(ctx context.Context, externalId string) (string, string, error)
 }
 
 type txnsvc struct {
@@ -28,7 +29,7 @@ func NewTransactionService(repo repo.Querier, db *pgxpool.Pool) TransactionServi
 	}
 }
 
-func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string, mpinHash string) (repo.Transaction, error) {
+func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string, mpinHash string, externalId string) (repo.Transaction, error) {
 
 	if Amount <= 0 {
 		return repo.Transaction{}, fmt.Errorf("invalid amount")
@@ -65,6 +66,7 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 		ToAccountIdentifier: ToAccountId,
 		Amount:              Amount,
 		Status:              "PENDING",
+		ExternalID:          externalId,
 	}
 
 	transaction, err := qtx.CreateTransaction(ctx, txParamsObj)
@@ -142,8 +144,7 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 
 }
 
-func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string) (repo.Transaction, error) {
-
+func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string, externalId string) (repo.Transaction, error) {
 
 	if Amount <= 0 {
 		return repo.Transaction{}, fmt.Errorf("invalid amount")
@@ -172,6 +173,7 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 		ToAccountIdentifier: ToAccountId,
 		Amount:              Amount,
 		Status:              "PENDING",
+		ExternalID:          externalId,
 	}
 
 	transaction, err := qtx.CreateTransaction(ctx, txParamsObj)
@@ -250,4 +252,12 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 
 func (s *txnsvc) GetTransactions(ctx context.Context, accountID string) ([]repo.Transaction, error) {
 	return s.repo.GetTransactions(ctx, accountID)
+}
+
+func (s *txnsvc) GetStatusByExternalId(ctx context.Context, externalId string) (string, string, error) {
+	result, err := s.repo.GetTransactionStatusByExternalId(ctx, externalId)
+	if err != nil {
+		return "","", err
+	}
+	return result.ID.String(), result.Status, err 
 }

@@ -35,7 +35,7 @@ func (h *AccountHandler) CreateAccount(c *gin.Context){
 		return
 	}
 
-	account, err:= h.accountService.CreateAccount(c.Request.Context(), accountDetails.Name, accountDetails.Phone)
+	account, err:= h.accountService.CreateAccount(c.Request.Context(), accountDetails.Name, accountDetails.Phone, accountDetails.MpinHash)
 	if err !=nil{
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -70,4 +70,5 @@ func (h *AccountHandler) DeleteAccount(c *gin.Context){
 type CreateAccountReq struct {
     Name  string `json:"name" binding:"required,min=1,max=255"`
     Phone string `json:"phone" binding:"required,e164"`  
+	MpinHash string `json:"mpin_hash" binding:"required,e164"`
 }
