@@ -21,10 +21,17 @@ import (
 func Initialize(r *gin.Engine, pool *pgxpool.Pool) {
 
 	repository := repo.New(pool)
+	ctx := context.Background()
+
+	
 
 	ledgerService := services.NewLedgerService(repository)
 	accountService := services.NewAccountService(repository, pool, ledgerService)
-	transactionService := services.NewTransactionService(repository, pool)
+	settlementAccountId, err := accountService.CreateSettlementAccount(ctx)
+	if err != nil {
+		log.Fatal("Failed to create settlement account:", err)
+	}
+	transactionService := services.NewTransactionService(repository, pool, settlementAccountId)
 
 	accountHandler := handlers.NewAccountHandler(accountService)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
@@ -45,11 +52,5 @@ func Initialize(r *gin.Engine, pool *pgxpool.Pool) {
 
 	routes.RegisterAccountRoutes(r, apiAuthMiddleware, accountHandler)
 	routes.RegisterTransactionRoutes(r, apiAuthMiddleware, idempotencyMiddleware, transactionHandler)
-
-	ctx := context.Background()
-
-	if err := accountService.CreateSettlementAccount(ctx); err != nil {
-		log.Fatal("Failed to create settlement account:", err)
-	}
 	
 }

@@ -15,7 +15,7 @@ type Querier interface {
 	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (ApiKey, error)
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error)
 	CreateLedgerEntry(ctx context.Context, arg CreateLedgerEntryParams) error
-	CreateSettlementAccount(ctx context.Context) error
+	CreateSettlementAccount(ctx context.Context) (pgtype.UUID, error)
 	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (CreateTransactionRow, error)
 	DeactivateAPIKey(ctx context.Context, keyID string) error
 	DeleteAccount(ctx context.Context, id pgtype.UUID) error
@@ -24,15 +24,17 @@ type Querier interface {
 	GetAccountForUpdate(ctx context.Context, id pgtype.UUID) (Account, error)
 	GetBalance(ctx context.Context, id pgtype.UUID) (int64, error)
 	GetMpinHash(ctx context.Context, id pgtype.UUID) (string, error)
-	GetSettlementAccountForUpdate(ctx context.Context) (Account, error)
+	GetSettlementAccount(ctx context.Context) (Account, error)
 	GetTransactionById(ctx context.Context, id pgtype.UUID) (Transaction, error)
 	GetTransactionStatusByExternalId(ctx context.Context, externalID string) (GetTransactionStatusByExternalIdRow, error)
 	GetTransactions(ctx context.Context, fromAccountID string) ([]Transaction, error)
 	IsValid(ctx context.Context, keyID string) (bool, error)
 	SetMpinHash(ctx context.Context, arg SetMpinHashParams) error
 	UpdateAPIKeyLastUsed(ctx context.Context, keyID string) error
-	UpdateAccountBalance(ctx context.Context, arg UpdateAccountBalanceParams) error
+	UpdateAccountBalanceCredit(ctx context.Context, arg UpdateAccountBalanceCreditParams) (int64, error)
 	UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) error
+	UpdateSettlementBalanceAtomic(ctx context.Context, balance int64) (int64, error)
+	UpdateUserBalanceDebit(ctx context.Context, arg UpdateUserBalanceDebitParams) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

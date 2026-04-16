@@ -21,17 +21,33 @@ FROM accounts
 WHERE id = $1 AND deleted_at IS NULL;
 
 
+-- name: UpdateUserBalanceDebit :execrows
+UPDATE accounts 
+SET balance = balance - $1, updated_at = NOW() 
+WHERE id = $2 
+  AND balance >= $1  
+  AND deleted_at IS NULL
+RETURNING balance;
+
+-- name: UpdateAccountBalanceCredit :one
+UPDATE accounts 
+SET balance = balance + $1, updated_at = NOW() 
+WHERE id = $2 
+  AND deleted_at IS NULL
+RETURNING balance;
+
+-- name: UpdateSettlementBalanceAtomic :one
+UPDATE accounts 
+SET balance = balance + $1, updated_at = NOW() 
+WHERE name = 'Settlement Account' 
+  AND is_system = TRUE 
+  AND deleted_at IS NULL
+RETURNING balance;
+
 -- name: GetAccountForUpdate :one
 SELECT * FROM accounts
 WHERE id = $1 AND deleted_at IS NULL
 FOR UPDATE;
-
-
--- name: UpdateAccountBalance :exec
-UPDATE accounts 
-SET balance = $2, updated_at = NOW() 
-WHERE id = $1;
-
 
 -- name: DeleteAccount :exec
 UPDATE accounts
@@ -40,8 +56,7 @@ SET deleted_at = NOW(),
 WHERE id = $1
   AND deleted_at IS NULL;
 
-
--- name: CreateSettlementAccount :exec
+-- name: CreateSettlementAccount :one
 INSERT INTO accounts (
     name,
     phone,
@@ -56,15 +71,15 @@ WHERE NOT EXISTS (
     FROM accounts 
     WHERE is_system = TRUE 
       AND name = 'Settlement Account'
-);
+)
+RETURNING id;
 
--- name: GetSettlementAccountForUpdate :one
+-- name: GetSettlementAccount :one
 SELECT *
 FROM accounts
 WHERE name = 'Settlement Account'
   AND is_system = TRUE
-  AND deleted_at IS NULL
-FOR UPDATE;
+  AND deleted_at IS NULL;
 
 -- name: SetMpinHash :exec
 UPDATE accounts
@@ -78,3 +93,8 @@ SELECT mpin_hash
 FROM accounts 
 WHERE id = $1 
 LIMIT 1;
+
+-- -- name: UpdateAccountBalance :exec
+-- UPDATE accounts 
+-- SET balance = $2, updated_at = NOW() 
+-- WHERE id = $1;

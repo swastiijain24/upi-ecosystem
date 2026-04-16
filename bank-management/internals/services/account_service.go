@@ -14,7 +14,7 @@ type AccountService interface {
 	CreateAccount(ctx context.Context, Name string, Phone string, mpinHash string) (repo.CreateAccountRow, error)
 	GetBalance(ctx context.Context, accountId string) (int64, error)
 	DeleteAccount(ctx context.Context, accountId string) error
-	CreateSettlementAccount(ctx context.Context) error
+	CreateSettlementAccount(ctx context.Context) (string,error ) 
 }
 
 type accsvc struct {
@@ -98,9 +98,10 @@ func (s *accsvc) DeleteAccount(ctx context.Context, accountId string) error {
 	return nil
 }
 
-func (s *accsvc) CreateSettlementAccount(ctx context.Context) error {
-	if err := s.repo.CreateSettlementAccount(ctx); err != nil {
-		return err
+func (s *accsvc) CreateSettlementAccount(ctx context.Context) (string,error )  {
+	accountId, err := s.repo.CreateSettlementAccount(ctx)
+	if  err != nil {
+		return "", err
 	}
-	return nil
+	return accountId.String(), nil 
 }

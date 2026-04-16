@@ -49,7 +49,7 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (C
 	return i, err
 }
 
-const createSettlementAccount = `-- name: CreateSettlementAccount :exec
+const createSettlementAccount = `-- name: CreateSettlementAccount :one
 INSERT INTO accounts (
     name,
     phone,
@@ -65,11 +65,14 @@ WHERE NOT EXISTS (
     WHERE is_system = TRUE 
       AND name = 'Settlement Account'
 )
+RETURNING id
 `
 
-func (q *Queries) CreateSettlementAccount(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, createSettlementAccount)
-	return err
+func (q *Queries) CreateSettlementAccount(ctx context.Context) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, createSettlementAccount)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const deleteAccount = `-- name: DeleteAccount :exec
@@ -158,17 +161,16 @@ func (q *Queries) GetMpinHash(ctx context.Context, id pgtype.UUID) (string, erro
 	return mpin_hash, err
 }
 
-const getSettlementAccountForUpdate = `-- name: GetSettlementAccountForUpdate :one
+const getSettlementAccount = `-- name: GetSettlementAccount :one
 SELECT id, name, phone, balance, is_system, created_at, updated_at, deleted_at, mpin_hash
 FROM accounts
 WHERE name = 'Settlement Account'
   AND is_system = TRUE
   AND deleted_at IS NULL
-FOR UPDATE
 `
 
-func (q *Queries) GetSettlementAccountForUpdate(ctx context.Context) (Account, error) {
-	row := q.db.QueryRow(ctx, getSettlementAccountForUpdate)
+func (q *Queries) GetSettlementAccount(ctx context.Context) (Account, error) {
+	row := q.db.QueryRow(ctx, getSettlementAccount)
 	var i Account
 	err := row.Scan(
 		&i.ID,
@@ -202,18 +204,59 @@ func (q *Queries) SetMpinHash(ctx context.Context, arg SetMpinHashParams) error 
 	return err
 }
 
-const updateAccountBalance = `-- name: UpdateAccountBalance :exec
+const updateAccountBalanceCredit = `-- name: UpdateAccountBalanceCredit :one
 UPDATE accounts 
-SET balance = $2, updated_at = NOW() 
-WHERE id = $1
+SET balance = balance + $1, updated_at = NOW() 
+WHERE id = $2 
+  AND deleted_at IS NULL
+RETURNING balance
 `
 
-type UpdateAccountBalanceParams struct {
-	ID      pgtype.UUID `json:"id"`
+type UpdateAccountBalanceCreditParams struct {
 	Balance int64       `json:"balance"`
+	ID      pgtype.UUID `json:"id"`
 }
 
-func (q *Queries) UpdateAccountBalance(ctx context.Context, arg UpdateAccountBalanceParams) error {
-	_, err := q.db.Exec(ctx, updateAccountBalance, arg.ID, arg.Balance)
-	return err
+func (q *Queries) UpdateAccountBalanceCredit(ctx context.Context, arg UpdateAccountBalanceCreditParams) (int64, error) {
+	row := q.db.QueryRow(ctx, updateAccountBalanceCredit, arg.Balance, arg.ID)
+	var balance int64
+	err := row.Scan(&balance)
+	return balance, err
+}
+
+const updateSettlementBalanceAtomic = `-- name: UpdateSettlementBalanceAtomic :one
+UPDATE accounts 
+SET balance = balance + $1, updated_at = NOW() 
+WHERE name = 'Settlement Account' 
+  AND is_system = TRUE 
+  AND deleted_at IS NULL
+RETURNING balance
+`
+
+func (q *Queries) UpdateSettlementBalanceAtomic(ctx context.Context, balance int64) (int64, error) {
+	row := q.db.QueryRow(ctx, updateSettlementBalanceAtomic, balance)
+	err := row.Scan(&balance)
+	return balance, err
+}
+
+const updateUserBalanceDebit = `-- name: UpdateUserBalanceDebit :execrows
+UPDATE accounts 
+SET balance = balance - $1, updated_at = NOW() 
+WHERE id = $2 
+  AND balance >= $1  
+  AND deleted_at IS NULL
+RETURNING balance
+`
+
+type UpdateUserBalanceDebitParams struct {
+	Balance int64       `json:"balance"`
+	ID      pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateUserBalanceDebit(ctx context.Context, arg UpdateUserBalanceDebitParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateUserBalanceDebit, arg.Balance, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
