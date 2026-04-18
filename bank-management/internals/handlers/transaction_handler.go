@@ -30,9 +30,9 @@ func (h *TransactionHandler) Debit(c *gin.Context) {
 		return
 	}
 	response := Response{
-		bankReferenceId: transaction.ID.String(),
-		status:          transaction.Status,
-		created_at:      transaction.CreatedAt.Time,
+		BankReferenceId: transaction.ID.String(),
+		Status:          transaction.Status,
+		Created_at:      transaction.CreatedAt.Time,
 	}
 
 	c.JSON(201, response)
@@ -50,9 +50,9 @@ func (h *TransactionHandler) Credit(c *gin.Context) {
 		return
 	}
 	response := Response{
-		bankReferenceId: transaction.ID.String(),
-		status:          transaction.Status,
-		created_at:      transaction.CreatedAt.Time,
+		BankReferenceId: transaction.ID.String(),
+		Status:          transaction.Status,
+		Created_at:      transaction.CreatedAt.Time,
 	}
 
 	c.JSON(201, response)
@@ -70,9 +70,9 @@ func (h *TransactionHandler) Refund(c *gin.Context) {
 		return
 	}
 	response := Response{
-		bankReferenceId: transaction.ID.String(),
-		status:          transaction.Status,
-		created_at:      transaction.CreatedAt.Time,
+		BankReferenceId: transaction.ID.String(),
+		Status:          transaction.Status,
+		Created_at:      transaction.CreatedAt.Time,
 	}
 
 	c.JSON(201, response)
@@ -97,8 +97,8 @@ func (h *TransactionHandler) GetStatusOfTransaction(c *gin.Context) {
 	}
 	txnId, status, err := h.TransactionService.GetStatus(c.Request.Context(), statusReq.ExternalId, statusReq.TransactionType)
 	response := Response{
-		bankReferenceId: txnId,
-		status:          status,
+		BankReferenceId: txnId,
+		Status:          status,
 	}
 
 	if err != nil {
@@ -113,7 +113,7 @@ type DebitRequest struct {
 	ToAccountId   string `json:"to_account_id" binding:"required"`
 	Amount        int64  `json:"amount" binding:"required"`
 	Description   string `json:"description"`
-	MpinHash      string `json:"mpin_hash" binding:"required,e164"`
+	MpinHash      string `json:"mpin_hash" binding:"required"`
 	ExternalId    string `json:"external_id" binding:"required"`
 }
 
@@ -138,7 +138,7 @@ type StatusReq struct {
 }
 
 type Response struct {
-	bankReferenceId string
-	status          string
-	created_at      time.Time
+	BankReferenceId string
+	Status          string
+	Created_at      time.Time
 }

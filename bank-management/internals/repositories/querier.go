@@ -34,7 +34,7 @@ type Querier interface {
 	UpdateAPIKeyLastUsed(ctx context.Context, keyID string) error
 	UpdateAccountBalanceCredit(ctx context.Context, arg UpdateAccountBalanceCreditParams) (int64, error)
 	UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) error
-	UpdateSettlementBalanceAtomic(ctx context.Context, balance int64) (int64, error)
+	UpdateSettlementBalanceAtomic(ctx context.Context, arg UpdateSettlementBalanceAtomicParams) (int64, error)
 	UpdateUserBalanceDebit(ctx context.Context, arg UpdateUserBalanceDebitParams) (int64, error)
 }
 

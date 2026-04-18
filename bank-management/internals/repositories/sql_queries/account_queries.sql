@@ -39,9 +39,7 @@ RETURNING balance;
 -- name: UpdateSettlementBalanceAtomic :one
 UPDATE accounts 
 SET balance = balance + $1, updated_at = NOW() 
-WHERE name = 'Settlement Account' 
-  AND is_system = TRUE 
-  AND deleted_at IS NULL
+WHERE id = $2 AND deleted_at IS NULL
 RETURNING balance;
 
 -- name: GetAccountForUpdate :one

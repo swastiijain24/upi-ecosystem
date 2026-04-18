@@ -227,14 +227,18 @@ func (q *Queries) UpdateAccountBalanceCredit(ctx context.Context, arg UpdateAcco
 const updateSettlementBalanceAtomic = `-- name: UpdateSettlementBalanceAtomic :one
 UPDATE accounts 
 SET balance = balance + $1, updated_at = NOW() 
-WHERE name = 'Settlement Account' 
-  AND is_system = TRUE 
-  AND deleted_at IS NULL
+WHERE id = $2 AND deleted_at IS NULL
 RETURNING balance
 `
 
-func (q *Queries) UpdateSettlementBalanceAtomic(ctx context.Context, balance int64) (int64, error) {
-	row := q.db.QueryRow(ctx, updateSettlementBalanceAtomic, balance)
+type UpdateSettlementBalanceAtomicParams struct {
+	Balance int64       `json:"balance"`
+	ID      pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateSettlementBalanceAtomic(ctx context.Context, arg UpdateSettlementBalanceAtomicParams) (int64, error) {
+	row := q.db.QueryRow(ctx, updateSettlementBalanceAtomic, arg.Balance, arg.ID)
+	var balance int64
 	err := row.Scan(&balance)
 	return balance, err
 }

@@ -43,7 +43,7 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 	if err != nil {
 		return repo.Transaction{}, fmt.Errorf("error fetching pin")
 	}
-	if utils.ToPGText(mpinHash) != mpinHashstored {
+	if mpinHash != mpinHashstored.String {
 		return repo.Transaction{}, fmt.Errorf("invalid mpin")
 	}
 
@@ -84,7 +84,10 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 		return repo.Transaction{}, err
 	}
 
-	newSettlementAccountBalance, err := qtx.UpdateSettlementBalanceAtomic(ctx, Amount)
+	newSettlementAccountBalance, err := qtx.UpdateSettlementBalanceAtomic(ctx, repo.UpdateSettlementBalanceAtomicParams{
+		Balance: Amount,
+		ID: utils.StringtoUUID(s.settlementAccountId),
+	})
 	if err != nil {
 		return repo.Transaction{}, fmt.Errorf("error updating settlement account balance")
 	}
@@ -98,8 +101,7 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 		return repo.Transaction{}, err
 	}
 
-	finalTransaction, _ := s.repo.GetTransactionById(ctx, transaction.ID)
-	return finalTransaction, nil
+	return transaction, nil 
 
 }
 
@@ -141,7 +143,10 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 	}
 
 	//will send negative of amount
-	newSettlementAccountBalance, err := qtx.UpdateSettlementBalanceAtomic(ctx, -Amount)
+	newSettlementAccountBalance, err := qtx.UpdateSettlementBalanceAtomic(ctx, repo.UpdateSettlementBalanceAtomicParams{
+		Balance: -Amount,
+		ID: utils.StringtoUUID(s.settlementAccountId),
+	})
 	if err != nil {
 		return repo.Transaction{}, fmt.Errorf("error updating settlement account balance")
 	}
@@ -155,8 +160,8 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 		return repo.Transaction{}, err
 	}
 
-	finalTransaction, _ := s.repo.GetTransactionById(ctx, transaction.ID)
-	return finalTransaction, nil
+	return transaction, nil 
+
 }
 
 func (s *txnsvc) Refund(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, externalId string) (repo.Transaction, error) {
@@ -197,7 +202,10 @@ func (s *txnsvc) Refund(ctx context.Context, FromAccountID string, ToAccountId s
 	}
 
 	//will send negative of amount
-	newSettlementAccountBalance, err := qtx.UpdateSettlementBalanceAtomic(ctx, -Amount)
+	newSettlementAccountBalance, err := qtx.UpdateSettlementBalanceAtomic(ctx, repo.UpdateSettlementBalanceAtomicParams{
+		Balance: -Amount,
+		ID: utils.StringtoUUID(s.settlementAccountId),
+	})
 	if err != nil {
 		return repo.Transaction{}, fmt.Errorf("error updating settlement account balance")
 	}
@@ -211,8 +219,8 @@ func (s *txnsvc) Refund(ctx context.Context, FromAccountID string, ToAccountId s
 		return repo.Transaction{}, err
 	}
 
-	finalTransaction, _ := s.repo.GetTransactionById(ctx, transaction.ID)
-	return finalTransaction, nil
+	return transaction, nil 
+
 }
 
 func (s *txnsvc) GetTransactions(ctx context.Context, accountID string) ([]repo.Transaction, error) {
