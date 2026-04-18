@@ -1,28 +1,25 @@
 ## Overview
 
-This project is a high-concurrency, production-grade banking service designed as a core component of a larger UPI (Unified Payments Interface) ecosystem. It serves as the primary ledger and account management system that communicates with an NPCI (National Payments Corporation of India) switch to facilitate real-time peer-to-peer transactions.
+This project is a high-concurrency, production-grade banking service designed as a core component of a larger UPI (Unified Payments Interface) ecosystem. It serves as the primary authoritative ledger and account management system that communicates with an NPCI (National Payments Corporation of India) switch to facilitate real-time peer-to-peer transactions.
 
 ---
 
 ## Key Features
 
-- **Pessimistic Locking**  
-  Prevents "double-spending" and race conditions during concurrent transaction requests by using `FOR UPDATE` SQL locks on account records.
+- **Atomic Transactions**  
+  Utilizes PostgreSQL transactions and strict balance constraints to ensure debits and credits are executed as a single unit of work.
 
-- **Idempotency Protection**  
-  A Redis-backed middleware ensures that retried requests do not result in duplicate debits or credits.
-
-- **On-Read Reconciliation**  
-  Every balance inquiry triggers a real-time integrity check that verifies the stored account balance against the sum of all ledger entries.
-
-- **Audit Logging**  
-  A structured logging system tracks authentication successes, failures, and critical system events for security auditing.
+- **Distributed Idempotency**  
+  Implements a Redis-backed middleware to handle network retries gracefully, preventing duplicate processing of the same transaction.
+  
+- **Double-Entry Ledger**  
+  Every movement of funds creates two immutable ledger entries—one for the user and one for the system settlement account—ensuring auditability.
 
 - **Secure Authentication**  
   API Key-based security with SHA-256 hashing, expiration tracking, and CIDR-based IP whitelisting.
 
-- **ACID Compliant Transactions**  
-  Ensures atomicity across account updates and ledger entries within a single database transaction block.
+- **Audit Logging**  
+  A structured logging system tracks authentication successes, failures, and critical system events for security auditing.
 
 ---
 
