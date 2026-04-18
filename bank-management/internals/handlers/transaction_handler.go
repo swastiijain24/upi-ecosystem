@@ -25,16 +25,16 @@ func (h *TransactionHandler) Debit(c *gin.Context) {
 	}
 
 	transaction, err := h.TransactionService.Debit(c.Request.Context(), debitReq.FromAccountID, debitReq.ToAccountId, debitReq.Amount, debitReq.Description, debitReq.MpinHash, debitReq.ExternalId)
-	response := Response{
-		bankReferenceId: transaction.ID.String(),
-		status: transaction.Status,
-		created_at: transaction.CreatedAt.Time,
-	}
-
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	response := Response{
+		bankReferenceId: transaction.ID.String(),
+		status:          transaction.Status,
+		created_at:      transaction.CreatedAt.Time,
+	}
+
 	c.JSON(201, response)
 }
 
@@ -45,16 +45,36 @@ func (h *TransactionHandler) Credit(c *gin.Context) {
 		return
 	}
 	transaction, err := h.TransactionService.Credit(c.Request.Context(), creditReq.FromAccountID, creditReq.ToAccountId, creditReq.Amount, creditReq.Description, creditReq.ExternalId)
-	response := Response{
-		bankReferenceId: transaction.ID.String(),
-		status: transaction.Status,
-		created_at: transaction.CreatedAt.Time,
-	}
-
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	response := Response{
+		bankReferenceId: transaction.ID.String(),
+		status:          transaction.Status,
+		created_at:      transaction.CreatedAt.Time,
+	}
+
+	c.JSON(201, response)
+}
+
+func (h *TransactionHandler) Refund(c *gin.Context) {
+	var refundReq RefundRequest
+	if err := c.ShouldBindJSON(&refundReq); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	transaction, err := h.TransactionService.Refund(c.Request.Context(), refundReq.FromAccountID, refundReq.ToAccountId, refundReq.Amount, refundReq.ExternalId)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	response := Response{
+		bankReferenceId: transaction.ID.String(),
+		status:          transaction.Status,
+		created_at:      transaction.CreatedAt.Time,
+	}
+
 	c.JSON(201, response)
 }
 
@@ -67,19 +87,18 @@ func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 		return
 	}
 	c.JSON(200, transactions)
-
 }
 
-func (h *TransactionHandler) GetStatusByExternalId(c *gin.Context){
+func (h *TransactionHandler) GetStatusOfTransaction(c *gin.Context) {
 	var statusReq StatusReq
 	if err := c.ShouldBindJSON(&statusReq); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	txnId, status, err := h.TransactionService.GetStatusByExternalId(c.Request.Context(), statusReq.ExternalId)
+	txnId, status, err := h.TransactionService.GetStatus(c.Request.Context(), statusReq.ExternalId, statusReq.TransactionType)
 	response := Response{
 		bankReferenceId: txnId,
-		status: status,
+		status:          status,
 	}
 
 	if err != nil {
@@ -87,7 +106,6 @@ func (h *TransactionHandler) GetStatusByExternalId(c *gin.Context){
 		return
 	}
 	c.JSON(201, response)
-
 }
 
 type DebitRequest struct {
@@ -107,12 +125,20 @@ type CreditRequest struct {
 	ExternalId    string `json:"external_id" binding:"required"`
 }
 
-type StatusReq struct {
-	ExternalId string `json:"external_id" binding:"required"`
+type RefundRequest struct {
+	FromAccountID string `json:"from_account_id" binding:"required"`
+	ToAccountId   string `json:"to_account_id" binding:"required"`
+	Amount        int64  `json:"amount" binding:"required"`
+	ExternalId    string `json:"external_id" binding:"required"`
 }
 
-type Response struct{
-	bankReferenceId string 
-	status string 
-	created_at  time.Time
+type StatusReq struct {
+	ExternalId string `json:"external_id" binding:"required"`
+	TransactionType string `json:"transaction_type" binding:"required"`
+}
+
+type Response struct {
+	bankReferenceId string
+	status          string
+	created_at      time.Time
 }

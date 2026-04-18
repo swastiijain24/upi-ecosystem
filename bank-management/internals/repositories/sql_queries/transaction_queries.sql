@@ -1,16 +1,15 @@
-
 -- name: CreateTransaction :one
 INSERT INTO transactions (
     from_account_id,
     to_account_identifier,
     amount,
     status,
-    external_id
+    external_id,
+    type
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6
 )
-RETURNING id, from_account_id, to_account_identifier, amount, status, created_at,external_id, updated_at;
-
+RETURNING * ;
 
 -- name: GetTransactions :many
 SELECT *
@@ -30,7 +29,12 @@ SET status = $2,
 WHERE id = $1
   AND status != $2;
 
--- name: GetTransactionStatusByExternalId :one
+-- name: GetTransactionStatus :one
 SELECT Status, ID
 FROM transactions 
-WHERE external_id = $1 ;
+WHERE external_id = $1 AND type = $2;
+
+-- name: GetTransactionForIdempotency :one
+SELECT * 
+FROM transactions 
+WHERE external_id = $1 AND type = $2;

@@ -111,18 +111,31 @@ func (m *IdempotencyMiddleware) IdempotencyCheck() gin.HandlerFunc {
 			}
 		}
 
-		_ = m.redisStore.Set(key, response)
+		if isSafeToCache(writer.statusCode){
+			_ = m.redisStore.Set(key, response)
+		} else{
+			_ = m.redisStore.Delete(key)
+		}
+
 	}
 }
 
 func (m *IdempotencyMiddleware) replayGinResponse(c *gin.Context, resp *Response) {
 	for k, v := range resp.Headers {
 		c.Header(k, v)
-
 	}
 
 	c.Header(HeaderIdempotencyReplayed, "true")
-
 	c.Status(resp.StatusCode)
 	c.Writer.Write(resp.Body)
+}
+
+func isSafeToCache(status int) bool {
+	if status >= 200 && status <300 {
+		return true 
+	}
+	if status >= 400 && status <500 {
+		return true 
+	}
+	return false 
 }

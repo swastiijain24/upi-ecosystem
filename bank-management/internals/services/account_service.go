@@ -35,7 +35,7 @@ func (s *accsvc) SetAccountMPIN(ctx context.Context, accountID string, hashedMpi
   
     return s.repo.SetMpinHash(ctx, repo.SetMpinHashParams{
         ID: utils.StringtoUUID(accountID),
-        MpinHash:  hashedMpin,
+        MpinHash:  utils.ToPGText(hashedMpin),
     })
 }
 

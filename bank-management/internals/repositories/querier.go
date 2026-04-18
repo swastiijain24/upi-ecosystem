@@ -16,17 +16,18 @@ type Querier interface {
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error)
 	CreateLedgerEntry(ctx context.Context, arg CreateLedgerEntryParams) error
 	CreateSettlementAccount(ctx context.Context) (pgtype.UUID, error)
-	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (CreateTransactionRow, error)
+	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error)
 	DeactivateAPIKey(ctx context.Context, keyID string) error
 	DeleteAccount(ctx context.Context, id pgtype.UUID) error
 	GetAPIKeyByKeyID(ctx context.Context, keyID string) (ApiKey, error)
 	GetAccountByID(ctx context.Context, id pgtype.UUID) (Account, error)
 	GetAccountForUpdate(ctx context.Context, id pgtype.UUID) (Account, error)
 	GetBalance(ctx context.Context, id pgtype.UUID) (int64, error)
-	GetMpinHash(ctx context.Context, id pgtype.UUID) (string, error)
+	GetMpinHash(ctx context.Context, id pgtype.UUID) (pgtype.Text, error)
 	GetSettlementAccount(ctx context.Context) (Account, error)
 	GetTransactionById(ctx context.Context, id pgtype.UUID) (Transaction, error)
-	GetTransactionStatusByExternalId(ctx context.Context, externalID string) (GetTransactionStatusByExternalIdRow, error)
+	GetTransactionForIdempotency(ctx context.Context, arg GetTransactionForIdempotencyParams) (Transaction, error)
+	GetTransactionStatus(ctx context.Context, arg GetTransactionStatusParams) (GetTransactionStatusRow, error)
 	GetTransactions(ctx context.Context, fromAccountID string) ([]Transaction, error)
 	IsValid(ctx context.Context, keyID string) (bool, error)
 	SetMpinHash(ctx context.Context, arg SetMpinHashParams) error

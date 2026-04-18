@@ -21,7 +21,7 @@ FROM accounts
 WHERE id = $1 AND deleted_at IS NULL;
 
 
--- name: UpdateUserBalanceDebit :execrows
+-- name: UpdateUserBalanceDebit :one
 UPDATE accounts 
 SET balance = balance - $1, updated_at = NOW() 
 WHERE id = $2 
@@ -94,7 +94,3 @@ FROM accounts
 WHERE id = $1 
 LIMIT 1;
 
--- -- name: UpdateAccountBalance :exec
--- UPDATE accounts 
--- SET balance = $2, updated_at = NOW() 
--- WHERE id = $1;

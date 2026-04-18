@@ -17,7 +17,7 @@ type Account struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
-	MpinHash  string             `json:"mpin_hash"`
+	MpinHash  pgtype.Text        `json:"mpin_hash"`
 }
 
 type ApiKey struct {
@@ -53,4 +53,5 @@ type Transaction struct {
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	ExternalID          string             `json:"external_id"`
+	Type                string             `json:"type"`
 }

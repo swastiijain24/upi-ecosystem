@@ -17,11 +17,12 @@ INSERT INTO transactions (
     to_account_identifier,
     amount,
     status,
-    external_id
+    external_id,
+    type
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6
 )
-RETURNING id, from_account_id, to_account_identifier, amount, status, created_at,external_id, updated_at
+RETURNING id, from_account_id, to_account_identifier, amount, status, created_at, updated_at, external_id, type
 `
 
 type CreateTransactionParams struct {
@@ -30,28 +31,19 @@ type CreateTransactionParams struct {
 	Amount              int64  `json:"amount"`
 	Status              string `json:"status"`
 	ExternalID          string `json:"external_id"`
+	Type                string `json:"type"`
 }
 
-type CreateTransactionRow struct {
-	ID                  pgtype.UUID        `json:"id"`
-	FromAccountID       string             `json:"from_account_id"`
-	ToAccountIdentifier string             `json:"to_account_identifier"`
-	Amount              int64              `json:"amount"`
-	Status              string             `json:"status"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	ExternalID          string             `json:"external_id"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-}
-
-func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) (CreateTransactionRow, error) {
+func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error) {
 	row := q.db.QueryRow(ctx, createTransaction,
 		arg.FromAccountID,
 		arg.ToAccountIdentifier,
 		arg.Amount,
 		arg.Status,
 		arg.ExternalID,
+		arg.Type,
 	)
-	var i CreateTransactionRow
+	var i Transaction
 	err := row.Scan(
 		&i.ID,
 		&i.FromAccountID,
@@ -59,14 +51,15 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		&i.Amount,
 		&i.Status,
 		&i.CreatedAt,
-		&i.ExternalID,
 		&i.UpdatedAt,
+		&i.ExternalID,
+		&i.Type,
 	)
 	return i, err
 }
 
 const getTransactionById = `-- name: GetTransactionById :one
-SELECT id, from_account_id, to_account_identifier, amount, status, created_at, updated_at, external_id 
+SELECT id, from_account_id, to_account_identifier, amount, status, created_at, updated_at, external_id, type 
 FROM transactions 
 WHERE ID = $1
 `
@@ -83,30 +76,64 @@ func (q *Queries) GetTransactionById(ctx context.Context, id pgtype.UUID) (Trans
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ExternalID,
+		&i.Type,
 	)
 	return i, err
 }
 
-const getTransactionStatusByExternalId = `-- name: GetTransactionStatusByExternalId :one
-SELECT Status, ID
+const getTransactionForIdempotency = `-- name: GetTransactionForIdempotency :one
+SELECT id, from_account_id, to_account_identifier, amount, status, created_at, updated_at, external_id, type 
 FROM transactions 
-WHERE external_id = $1
+WHERE external_id = $1 AND type = $2
 `
 
-type GetTransactionStatusByExternalIdRow struct {
+type GetTransactionForIdempotencyParams struct {
+	ExternalID string `json:"external_id"`
+	Type       string `json:"type"`
+}
+
+func (q *Queries) GetTransactionForIdempotency(ctx context.Context, arg GetTransactionForIdempotencyParams) (Transaction, error) {
+	row := q.db.QueryRow(ctx, getTransactionForIdempotency, arg.ExternalID, arg.Type)
+	var i Transaction
+	err := row.Scan(
+		&i.ID,
+		&i.FromAccountID,
+		&i.ToAccountIdentifier,
+		&i.Amount,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ExternalID,
+		&i.Type,
+	)
+	return i, err
+}
+
+const getTransactionStatus = `-- name: GetTransactionStatus :one
+SELECT Status, ID
+FROM transactions 
+WHERE external_id = $1 AND type = $2
+`
+
+type GetTransactionStatusParams struct {
+	ExternalID string `json:"external_id"`
+	Type       string `json:"type"`
+}
+
+type GetTransactionStatusRow struct {
 	Status string      `json:"status"`
 	ID     pgtype.UUID `json:"id"`
 }
 
-func (q *Queries) GetTransactionStatusByExternalId(ctx context.Context, externalID string) (GetTransactionStatusByExternalIdRow, error) {
-	row := q.db.QueryRow(ctx, getTransactionStatusByExternalId, externalID)
-	var i GetTransactionStatusByExternalIdRow
+func (q *Queries) GetTransactionStatus(ctx context.Context, arg GetTransactionStatusParams) (GetTransactionStatusRow, error) {
+	row := q.db.QueryRow(ctx, getTransactionStatus, arg.ExternalID, arg.Type)
+	var i GetTransactionStatusRow
 	err := row.Scan(&i.Status, &i.ID)
 	return i, err
 }
 
 const getTransactions = `-- name: GetTransactions :many
-SELECT id, from_account_id, to_account_identifier, amount, status, created_at, updated_at, external_id
+SELECT id, from_account_id, to_account_identifier, amount, status, created_at, updated_at, external_id, type
 FROM transactions
 WHERE from_account_id = $1 or to_account_identifier = $1
 ORDER BY created_at DESC
@@ -130,6 +157,7 @@ func (q *Queries) GetTransactions(ctx context.Context, fromAccountID string) ([]
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ExternalID,
+			&i.Type,
 		); err != nil {
 			return nil, err
 		}

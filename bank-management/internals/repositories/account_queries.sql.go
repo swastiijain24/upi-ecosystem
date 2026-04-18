@@ -154,9 +154,9 @@ WHERE id = $1
 LIMIT 1
 `
 
-func (q *Queries) GetMpinHash(ctx context.Context, id pgtype.UUID) (string, error) {
+func (q *Queries) GetMpinHash(ctx context.Context, id pgtype.UUID) (pgtype.Text, error) {
 	row := q.db.QueryRow(ctx, getMpinHash, id)
-	var mpin_hash string
+	var mpin_hash pgtype.Text
 	err := row.Scan(&mpin_hash)
 	return mpin_hash, err
 }
@@ -196,7 +196,7 @@ WHERE id = $1
 
 type SetMpinHashParams struct {
 	ID       pgtype.UUID `json:"id"`
-	MpinHash string      `json:"mpin_hash"`
+	MpinHash pgtype.Text `json:"mpin_hash"`
 }
 
 func (q *Queries) SetMpinHash(ctx context.Context, arg SetMpinHashParams) error {
@@ -239,7 +239,7 @@ func (q *Queries) UpdateSettlementBalanceAtomic(ctx context.Context, balance int
 	return balance, err
 }
 
-const updateUserBalanceDebit = `-- name: UpdateUserBalanceDebit :execrows
+const updateUserBalanceDebit = `-- name: UpdateUserBalanceDebit :one
 UPDATE accounts 
 SET balance = balance - $1, updated_at = NOW() 
 WHERE id = $2 
@@ -254,9 +254,8 @@ type UpdateUserBalanceDebitParams struct {
 }
 
 func (q *Queries) UpdateUserBalanceDebit(ctx context.Context, arg UpdateUserBalanceDebitParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updateUserBalanceDebit, arg.Balance, arg.ID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+	row := q.db.QueryRow(ctx, updateUserBalanceDebit, arg.Balance, arg.ID)
+	var balance int64
+	err := row.Scan(&balance)
+	return balance, err
 }
