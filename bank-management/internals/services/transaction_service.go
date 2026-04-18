@@ -54,6 +54,9 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 	if err == nil {
 		return existingTransaction, nil
 	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return repo.Transaction{}, err
+	}
 
 	dbTx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -86,7 +89,7 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 
 	newSettlementAccountBalance, err := qtx.UpdateSettlementBalanceAtomic(ctx, repo.UpdateSettlementBalanceAtomicParams{
 		Balance: Amount,
-		ID: utils.StringtoUUID(s.settlementAccountId),
+		ID:      utils.StringtoUUID(s.settlementAccountId),
 	})
 	if err != nil {
 		return repo.Transaction{}, fmt.Errorf("error updating settlement account balance")
@@ -101,7 +104,7 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 		return repo.Transaction{}, err
 	}
 
-	return transaction, nil 
+	return transaction, nil
 
 }
 
@@ -117,6 +120,9 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 	})
 	if err == nil {
 		return existingTransaction, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return repo.Transaction{}, err
 	}
 
 	dbTx, err := s.db.Begin(ctx)
@@ -136,6 +142,9 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 		Balance: Amount,
 		ID:      utils.StringtoUUID(ToAccountId),
 	})
+	if err != nil {
+		return repo.Transaction{}, fmt.Errorf("credit balance update failed: %w", err)
+	}
 
 	err = s.createLedgerEntry(ctx, qtx, transaction.ID, ToAccountId, "CREDIT", 0, Amount, newUserBalance, Description)
 	if err != nil {
@@ -145,7 +154,7 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 	//will send negative of amount
 	newSettlementAccountBalance, err := qtx.UpdateSettlementBalanceAtomic(ctx, repo.UpdateSettlementBalanceAtomicParams{
 		Balance: -Amount,
-		ID: utils.StringtoUUID(s.settlementAccountId),
+		ID:      utils.StringtoUUID(s.settlementAccountId),
 	})
 	if err != nil {
 		return repo.Transaction{}, fmt.Errorf("error updating settlement account balance")
@@ -160,7 +169,7 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 		return repo.Transaction{}, err
 	}
 
-	return transaction, nil 
+	return transaction, nil
 
 }
 
@@ -177,6 +186,9 @@ func (s *txnsvc) Refund(ctx context.Context, FromAccountID string, ToAccountId s
 	if err == nil {
 		return existingTransaction, nil
 	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return repo.Transaction{}, err
+	}
 
 	dbTx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -186,7 +198,7 @@ func (s *txnsvc) Refund(ctx context.Context, FromAccountID string, ToAccountId s
 
 	qtx := repo.New(dbTx)
 
-	transaction, err := s.createTransaction(ctx, qtx, FromAccountID, ToAccountId, Amount , externalId, "REFUND")
+	transaction, err := s.createTransaction(ctx, qtx, FromAccountID, ToAccountId, Amount, externalId, "REFUND")
 	if err != nil {
 		return repo.Transaction{}, err
 	}
@@ -195,6 +207,9 @@ func (s *txnsvc) Refund(ctx context.Context, FromAccountID string, ToAccountId s
 		Balance: Amount,
 		ID:      utils.StringtoUUID(ToAccountId),
 	})
+	if err != nil {
+		return repo.Transaction{}, fmt.Errorf("credit balance update failed: %w", err)
+	}
 
 	err = s.createLedgerEntry(ctx, qtx, transaction.ID, ToAccountId, "CREDIT", 0, Amount, newUserBalance, "")
 	if err != nil {
@@ -204,7 +219,7 @@ func (s *txnsvc) Refund(ctx context.Context, FromAccountID string, ToAccountId s
 	//will send negative of amount
 	newSettlementAccountBalance, err := qtx.UpdateSettlementBalanceAtomic(ctx, repo.UpdateSettlementBalanceAtomicParams{
 		Balance: -Amount,
-		ID: utils.StringtoUUID(s.settlementAccountId),
+		ID:      utils.StringtoUUID(s.settlementAccountId),
 	})
 	if err != nil {
 		return repo.Transaction{}, fmt.Errorf("error updating settlement account balance")
@@ -219,7 +234,7 @@ func (s *txnsvc) Refund(ctx context.Context, FromAccountID string, ToAccountId s
 		return repo.Transaction{}, err
 	}
 
-	return transaction, nil 
+	return transaction, nil
 
 }
 

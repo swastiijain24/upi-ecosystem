@@ -14,18 +14,21 @@ import (
 const createAccount = `-- name: CreateAccount :one
 INSERT INTO accounts (
     name,
-    phone
+    phone,
+    mpin_hash
 )
 VALUES (
     $1,
-    $2
+    $2,
+    $3
 )
 RETURNING id, name, phone, balance, created_at
 `
 
 type CreateAccountParams struct {
-	Name  string `json:"name"`
-	Phone string `json:"phone"`
+	Name     string      `json:"name"`
+	Phone    string      `json:"phone"`
+	MpinHash pgtype.Text `json:"mpin_hash"`
 }
 
 type CreateAccountRow struct {
@@ -37,7 +40,7 @@ type CreateAccountRow struct {
 }
 
 func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error) {
-	row := q.db.QueryRow(ctx, createAccount, arg.Name, arg.Phone)
+	row := q.db.QueryRow(ctx, createAccount, arg.Name, arg.Phone, arg.MpinHash)
 	var i CreateAccountRow
 	err := row.Scan(
 		&i.ID,
@@ -184,24 +187,6 @@ func (q *Queries) GetSettlementAccount(ctx context.Context) (Account, error) {
 		&i.MpinHash,
 	)
 	return i, err
-}
-
-const setMpinHash = `-- name: SetMpinHash :exec
-UPDATE accounts
-SET 
-    mpin_hash = $2,
-    updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
-`
-
-type SetMpinHashParams struct {
-	ID       pgtype.UUID `json:"id"`
-	MpinHash pgtype.Text `json:"mpin_hash"`
-}
-
-func (q *Queries) SetMpinHash(ctx context.Context, arg SetMpinHashParams) error {
-	_, err := q.db.Exec(ctx, setMpinHash, arg.ID, arg.MpinHash)
-	return err
 }
 
 const updateAccountBalanceCredit = `-- name: UpdateAccountBalanceCredit :one

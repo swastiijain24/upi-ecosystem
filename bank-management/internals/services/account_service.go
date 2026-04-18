@@ -31,13 +31,6 @@ func NewAccountService(repo repo.Querier, db *pgxpool.Pool, ledgerService Ledger
 	}
 }
 
-func (s *accsvc) SetAccountMPIN(ctx context.Context, accountID string, hashedMpin string) error {
-  
-    return s.repo.SetMpinHash(ctx, repo.SetMpinHashParams{
-        ID: utils.StringtoUUID(accountID),
-        MpinHash:  utils.ToPGText(hashedMpin),
-    })
-}
 
 func (s *accsvc) GetAccountById(ctx context.Context, id string) (repo.Account, error) {
 	return s.repo.GetAccountByID(ctx, utils.StringtoUUID(id))
@@ -62,6 +55,7 @@ func (s *accsvc) CreateAccount(ctx context.Context, Name string, Phone string, m
 	accountParams := repo.CreateAccountParams{
 		Name:  Name,
 		Phone: Phone,
+		MpinHash: utils.ToPGText(mpinHash),
 	}
 
 	account, err := s.repo.CreateAccount(ctx, accountParams)

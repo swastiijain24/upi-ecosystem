@@ -138,7 +138,7 @@ type StatusReq struct {
 }
 
 type Response struct {
-	BankReferenceId string
-	Status          string
-	Created_at      time.Time
+	BankReferenceId string `json:"bank_reference_id" binding:"required"`
+	Status          string `json:"status" binding:"required"`
+	Created_at      time.Time `json:"created_at"`
 }

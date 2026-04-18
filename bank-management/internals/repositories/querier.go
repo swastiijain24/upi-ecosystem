@@ -30,7 +30,6 @@ type Querier interface {
 	GetTransactionStatus(ctx context.Context, arg GetTransactionStatusParams) (GetTransactionStatusRow, error)
 	GetTransactions(ctx context.Context, fromAccountID string) ([]Transaction, error)
 	IsValid(ctx context.Context, keyID string) (bool, error)
-	SetMpinHash(ctx context.Context, arg SetMpinHashParams) error
 	UpdateAPIKeyLastUsed(ctx context.Context, keyID string) error
 	UpdateAccountBalanceCredit(ctx context.Context, arg UpdateAccountBalanceCreditParams) (int64, error)
 	UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) error

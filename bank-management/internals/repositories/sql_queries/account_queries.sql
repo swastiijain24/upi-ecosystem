@@ -1,11 +1,13 @@
 -- name: CreateAccount :one
 INSERT INTO accounts (
     name,
-    phone
+    phone,
+    mpin_hash
 )
 VALUES (
     $1,
-    $2
+    $2,
+    $3
 )
 RETURNING id, name, phone, balance, created_at;
 
@@ -79,16 +81,9 @@ WHERE name = 'Settlement Account'
   AND is_system = TRUE
   AND deleted_at IS NULL;
 
--- name: SetMpinHash :exec
-UPDATE accounts
-SET 
-    mpin_hash = $2,
-    updated_at = CURRENT_TIMESTAMP
-WHERE id = $1;
 
 -- name: GetMpinHash :one
 SELECT mpin_hash 
 FROM accounts 
 WHERE id = $1 
 LIMIT 1;
-
