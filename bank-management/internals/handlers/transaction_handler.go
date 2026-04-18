@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,14 +19,19 @@ func NewTransactionHandler(s services.TransactionService) *TransactionHandler {
 }
 
 func (h *TransactionHandler) Debit(c *gin.Context) {
+
+	log.Print("debit api called 10")
+
 	var debitReq DebitRequest
 	if err := c.ShouldBindJSON(&debitReq); err != nil {
+		log.Print("1")
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
 	transaction, err := h.TransactionService.Debit(c.Request.Context(), debitReq.FromAccountID, debitReq.ToAccountId, debitReq.Amount, debitReq.Description, debitReq.MpinHash, debitReq.ExternalId)
 	if err != nil {
+		log.Print("2")
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
@@ -34,11 +40,14 @@ func (h *TransactionHandler) Debit(c *gin.Context) {
 		Status:          transaction.Status,
 		Created_at:      transaction.CreatedAt.Time,
 	}
-
-	c.JSON(201, response)
+	log.Print("returning debit response 11")
+	c.JSON(200, response)
 }
 
 func (h *TransactionHandler) Credit(c *gin.Context) {
+
+	log.Print("credit api called 19")
+
 	var creditReq CreditRequest
 	if err := c.ShouldBindJSON(&creditReq); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
@@ -54,11 +63,14 @@ func (h *TransactionHandler) Credit(c *gin.Context) {
 		Status:          transaction.Status,
 		Created_at:      transaction.CreatedAt.Time,
 	}
-
-	c.JSON(201, response)
+	log.Print("returning credit response 21")
+	c.JSON(200, response)
 }
 
 func (h *TransactionHandler) Refund(c *gin.Context) {
+
+	log.Print("refund api called")
+
 	var refundReq RefundRequest
 	if err := c.ShouldBindJSON(&refundReq); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
@@ -74,8 +86,8 @@ func (h *TransactionHandler) Refund(c *gin.Context) {
 		Status:          transaction.Status,
 		Created_at:      transaction.CreatedAt.Time,
 	}
-
-	c.JSON(201, response)
+	log.Print("returning response")
+	c.JSON(200, response)
 }
 
 func (h *TransactionHandler) GetTransactions(c *gin.Context) {
@@ -105,7 +117,7 @@ func (h *TransactionHandler) GetStatusOfTransaction(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(201, response)
+	c.JSON(200, response)
 }
 
 type DebitRequest struct {

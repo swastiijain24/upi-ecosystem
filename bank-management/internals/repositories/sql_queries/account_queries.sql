@@ -62,16 +62,13 @@ INSERT INTO accounts (
     phone,
     is_system
 )
-SELECT 
+VALUES (
     'Settlement Account',
     'SYSTEM',
     TRUE
-WHERE NOT EXISTS (
-    SELECT 1 
-    FROM accounts 
-    WHERE is_system = TRUE 
-      AND name = 'Settlement Account'
 )
+ON CONFLICT (is_system) WHERE (is_system = TRUE)
+DO UPDATE SET name = EXCLUDED.name
 RETURNING id;
 
 -- name: GetSettlementAccount :one

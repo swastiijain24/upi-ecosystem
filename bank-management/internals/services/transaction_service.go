@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -34,6 +36,8 @@ func NewTransactionService(repo repo.Querier, db *pgxpool.Pool, settlementAccoun
 }
 
 func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string, mpinHash string, externalId string) (repo.Transaction, error) {
+
+	log.Print("function called")
 
 	if Amount <= 0 {
 		return repo.Transaction{}, fmt.Errorf("invalid amount")
@@ -103,12 +107,13 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 	if err := dbTx.Commit(ctx); err != nil {
 		return repo.Transaction{}, err
 	}
-
-	return transaction, nil
+	return s.repo.GetTransactionById(ctx, transaction.ID)
 
 }
 
 func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, Description string, externalId string) (repo.Transaction, error) {
+
+	log.Print("credit function called 20")
 
 	if Amount <= 0 {
 		return repo.Transaction{}, fmt.Errorf("invalid amount")
@@ -152,12 +157,13 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 	}
 
 	//will send negative of amount
+	log.Print(s.settlementAccountId)
 	newSettlementAccountBalance, err := qtx.UpdateSettlementBalanceAtomic(ctx, repo.UpdateSettlementBalanceAtomicParams{
 		Balance: -Amount,
 		ID:      utils.StringtoUUID(s.settlementAccountId),
 	})
 	if err != nil {
-		return repo.Transaction{}, fmt.Errorf("error updating settlement account balance")
+		return repo.Transaction{}, fmt.Errorf("error updating settlement account balance %s", err )
 	}
 
 	err = s.createLedgerEntry(ctx, qtx, transaction.ID, s.settlementAccountId, "DEBIT", Amount, 0, newSettlementAccountBalance, "settlement account")
@@ -169,11 +175,13 @@ func (s *txnsvc) Credit(ctx context.Context, FromAccountID string, ToAccountId s
 		return repo.Transaction{}, err
 	}
 
-	return transaction, nil
+	return s.repo.GetTransactionById(ctx, transaction.ID)
 
 }
 
 func (s *txnsvc) Refund(ctx context.Context, FromAccountID string, ToAccountId string, Amount int64, externalId string) (repo.Transaction, error) {
+
+	log.Print("function called")
 
 	if Amount <= 0 {
 		return repo.Transaction{}, fmt.Errorf("invalid amount")
@@ -234,7 +242,8 @@ func (s *txnsvc) Refund(ctx context.Context, FromAccountID string, ToAccountId s
 		return repo.Transaction{}, err
 	}
 
-	return transaction, nil
+	return s.repo.GetTransactionById(ctx, transaction.ID)
+
 
 }
 

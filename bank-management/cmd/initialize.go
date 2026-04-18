@@ -26,6 +26,7 @@ func Initialize(r *gin.Engine, pool *pgxpool.Pool) {
 	ledgerService := services.NewLedgerService(repository)
 	accountService := services.NewAccountService(repository, pool, ledgerService)
 	settlementAccountId, err := accountService.CreateSettlementAccount(ctx)
+	log.Print(settlementAccountId)
 	if err != nil {
 		log.Print("Failed to create settlement account:", err)
 	}
