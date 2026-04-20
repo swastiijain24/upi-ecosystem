@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	repo "github.com/swastiijain24/bank-management/internals/repositories"
 	"github.com/swastiijain24/bank-management/internals/utils"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type TransactionService interface {
@@ -43,13 +45,20 @@ func (s *txnsvc) Debit(ctx context.Context, FromAccountID string, ToAccountId st
 		return repo.Transaction{}, fmt.Errorf("invalid amount")
 	}
 
+	decryptedPin, err := utils.DecryptAES(mpinHash, []byte(os.Getenv("MPIN_ENCRYPTION_KEY")))
+	if err != nil {
+		return repo.Transaction{}, fmt.Errorf("decryption error: %w", err)
+	}
+
 	mpinHashstored, err := s.repo.GetMpinHash(ctx, utils.StringtoUUID(FromAccountID))
 	if err != nil {
 		return repo.Transaction{}, fmt.Errorf("error fetching pin")
 	}
-	if mpinHash != mpinHashstored.String {
-		return repo.Transaction{}, fmt.Errorf("invalid mpin")
-	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(mpinHashstored.String), []byte(decryptedPin))
+    if err != nil {
+        return repo.Transaction{}, fmt.Errorf("invalid mpin")
+    }
 
 	existingTransaction, err := s.repo.GetTransactionForIdempotency(ctx, repo.GetTransactionForIdempotencyParams{
 		ExternalID: externalId,

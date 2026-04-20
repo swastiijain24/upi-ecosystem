@@ -3,10 +3,12 @@ package services
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	repo "github.com/swastiijain24/bank-management/internals/repositories"
 	"github.com/swastiijain24/bank-management/internals/utils"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type AccountService interface {
@@ -42,20 +44,28 @@ func (s *accsvc) CreateAccount(ctx context.Context, Name string, Phone string, m
 		return repo.CreateAccountRow{}, fmt.Errorf("Name not given")
 
 	}
-
 	if Phone == "" {
 		return repo.CreateAccountRow{}, fmt.Errorf("Phone not given")
 
 	}
-
 	if mpinHash == ""{
 		return repo.CreateAccountRow{}, fmt.Errorf("mpinHash not given")
 	}
 
+	decryptedPin, err := utils.DecryptAES(mpinHash, []byte(os.Getenv("MPIN_ENCRYPTION_KEY")))
+	if err != nil {
+		return repo.CreateAccountRow{}, fmt.Errorf("decryption error: %w", err)
+	}
+
+	hashedMpin, err := bcrypt.GenerateFromPassword([]byte(decryptedPin), bcrypt.DefaultCost)
+    if err != nil {
+        return repo.CreateAccountRow{}, fmt.Errorf("failed to hash mpin: %w", err)
+    }
+
 	accountParams := repo.CreateAccountParams{
 		Name:  Name,
 		Phone: Phone,
-		MpinHash: utils.ToPGText(mpinHash),
+		MpinHash: utils.ToPGText(string(hashedMpin)),
 	}
 
 	account, err := s.repo.CreateAccount(ctx, accountParams)

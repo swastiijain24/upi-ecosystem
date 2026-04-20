@@ -10,12 +10,13 @@ import (
 func RegisterTransactionRoutes(r *gin.Engine, apiAuthMiddleware* apiAuth.APIMiddleware, idempotencyMiddleware* idempotency.IdempotencyMiddleware , transactionHandler* handlers.TransactionHandler){
 
 	transactionRoutes := r.Group("/transactions")
+	transactionRoutes.Use(apiAuthMiddleware.ApiAuthentication())
 	{
-		transactionRoutes.POST("/debit", apiAuthMiddleware.ApiAuthentication(), idempotencyMiddleware.IdempotencyCheck(), transactionHandler.Debit)
-		transactionRoutes.POST("/credit", apiAuthMiddleware.ApiAuthentication(), idempotencyMiddleware.IdempotencyCheck(), transactionHandler.Credit)
-		transactionRoutes.POST("/refund", apiAuthMiddleware.ApiAuthentication(), idempotencyMiddleware.IdempotencyCheck(), transactionHandler.Refund)
-		transactionRoutes.GET("/account/:id",apiAuthMiddleware.ApiAuthentication(),  transactionHandler.GetTransactions)
-		transactionRoutes.GET("/status/:external_id", apiAuthMiddleware.ApiAuthentication(), transactionHandler.GetStatusOfTransaction)
+		transactionRoutes.POST("/debit", idempotencyMiddleware.IdempotencyCheck(), transactionHandler.Debit)
+		transactionRoutes.POST("/credit", idempotencyMiddleware.IdempotencyCheck(), transactionHandler.Credit)
+		transactionRoutes.POST("/refund", idempotencyMiddleware.IdempotencyCheck(), transactionHandler.Refund)
+		transactionRoutes.GET("/account/:id", transactionHandler.GetTransactions)
+		transactionRoutes.GET("/status/:external_id", transactionHandler.GetStatusOfTransaction)
 	}
 	
 }
