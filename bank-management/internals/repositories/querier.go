@@ -19,6 +19,7 @@ type Querier interface {
 	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error)
 	DeactivateAPIKey(ctx context.Context, keyID string) error
 	DeleteAccount(ctx context.Context, id pgtype.UUID) error
+	DiscoverAccountsByPhone(ctx context.Context, phone string) ([]pgtype.UUID, error)
 	GetAPIKeyByKeyID(ctx context.Context, keyID string) (ApiKey, error)
 	GetAccountByID(ctx context.Context, id pgtype.UUID) (Account, error)
 	GetAccountForUpdate(ctx context.Context, id pgtype.UUID) (Account, error)
@@ -32,6 +33,7 @@ type Querier interface {
 	IsValid(ctx context.Context, keyID string) (bool, error)
 	UpdateAPIKeyLastUsed(ctx context.Context, keyID string) error
 	UpdateAccountBalanceCredit(ctx context.Context, arg UpdateAccountBalanceCreditParams) (int64, error)
+	UpdateMpin(ctx context.Context, arg UpdateMpinParams) error
 	UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) error
 	UpdateSettlementBalanceAtomic(ctx context.Context, arg UpdateSettlementBalanceAtomicParams) (int64, error)
 	UpdateUserBalanceDebit(ctx context.Context, arg UpdateUserBalanceDebitParams) (int64, error)

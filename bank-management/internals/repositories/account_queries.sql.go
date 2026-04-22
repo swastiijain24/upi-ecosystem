@@ -88,6 +88,33 @@ func (q *Queries) DeleteAccount(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const discoverAccountsByPhone = `-- name: DiscoverAccountsByPhone :many
+SELECT 
+  id
+FROM accounts
+WHERE phone = $1
+`
+
+func (q *Queries) DiscoverAccountsByPhone(ctx context.Context, phone string) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, discoverAccountsByPhone, phone)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.UUID
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAccountByID = `-- name: GetAccountByID :one
 SELECT id, name, phone, balance, is_system, created_at, updated_at, deleted_at, mpin_hash
 FROM accounts
@@ -204,6 +231,22 @@ func (q *Queries) UpdateAccountBalanceCredit(ctx context.Context, arg UpdateAcco
 	var balance int64
 	err := row.Scan(&balance)
 	return balance, err
+}
+
+const updateMpin = `-- name: UpdateMpin :exec
+UPDATE accounts
+SET mpin_hash = $2
+WHERE id = $1
+`
+
+type UpdateMpinParams struct {
+	ID       pgtype.UUID `json:"id"`
+	MpinHash pgtype.Text `json:"mpin_hash"`
+}
+
+func (q *Queries) UpdateMpin(ctx context.Context, arg UpdateMpinParams) error {
+	_, err := q.db.Exec(ctx, updateMpin, arg.ID, arg.MpinHash)
+	return err
 }
 
 const updateSettlementBalanceAtomic = `-- name: UpdateSettlementBalanceAtomic :one

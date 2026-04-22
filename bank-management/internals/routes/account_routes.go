@@ -12,8 +12,11 @@ func RegisterAccountRoutes(r *gin.Engine,  apiAuthMiddleware* apiAuth.APIMiddlew
 	{
 		accountRoutes.POST("/",  accountHandler.CreateAccount)
 		accountRoutes.GET("/:id",  accountHandler.GetAccountById)
-		accountRoutes.GET("/:id/balance", accountHandler.GetBalance)
+		accountRoutes.GET("/balance/:id", accountHandler.GetBalance)
 		accountRoutes.DELETE("/:id",  accountHandler.DeleteAccount)
+		accountRoutes.GET("/discover", accountHandler.DiscoverAccounts)
+		accountRoutes.POST("/mpin/:id",  accountHandler.SetMpin)
+		accountRoutes.PUT("/mpin/:id",  accountHandler.ChangeMpin)
 	}
 }
 

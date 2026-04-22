@@ -84,3 +84,14 @@ SELECT mpin_hash
 FROM accounts 
 WHERE id = $1 
 LIMIT 1;
+
+-- name: DiscoverAccountsByPhone :many
+SELECT 
+  id
+FROM accounts
+WHERE phone = $1; 
+
+-- name: UpdateMpin :exec
+UPDATE accounts
+SET mpin_hash = $2
+WHERE id = $1;

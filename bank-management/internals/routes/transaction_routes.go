@@ -18,5 +18,4 @@ func RegisterTransactionRoutes(r *gin.Engine, apiAuthMiddleware* apiAuth.APIMidd
 		transactionRoutes.GET("/account/:id", transactionHandler.GetTransactions)
 		transactionRoutes.GET("/status/:external_id", transactionHandler.GetStatusOfTransaction)
 	}
-	
 }
