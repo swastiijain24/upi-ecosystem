@@ -1,7 +1,6 @@
 package apiAuth
 
 import (
-	"context"
 	"net"
 	"strings"
 	"time"
@@ -89,7 +88,7 @@ func (m *APIMiddleware) ApiAuthentication() gin.HandlerFunc {
 		}
 
 		go func() {
-			_ = m.apiKeyService.UpdateAPIKeyLastUsed(context.Background(), key.KeyID)
+			_ = m.apiKeyService.UpdateAPIKeyLastUsed(ctx, key.KeyID)
 		}()
 
 

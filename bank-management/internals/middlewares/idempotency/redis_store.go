@@ -46,8 +46,7 @@ func(s* RedisStore) key(idempotencyKey string) string{
 	return s.prefix + idempotencyKey
 }
 
-func (s* RedisStore) Get(key string) (*Response, error){
-	ctx:= context.Background()
+func (s* RedisStore) Get(ctx context.Context, key string) (*Response, error){
 
 	data, err := s.redisClient.Get(ctx, s.key(key)).Bytes()
 	if errors.Is(err, redis.Nil){
@@ -66,8 +65,7 @@ func (s* RedisStore) Get(key string) (*Response, error){
 	return &resp, nil 
 }
 
-func (s* RedisStore) Set(key string, response *Response) error{
-	ctx :=  context.Background()
+func (s* RedisStore) Set(ctx context.Context,key string, response *Response) error{
 
 	response.CreatedAt = time.Now()
 	data, err := json.Marshal(response)
@@ -78,8 +76,7 @@ func (s* RedisStore) Set(key string, response *Response) error{
 	return s.redisClient.Set(ctx, s.key(key), data, s.ttl).Err()
 }
 
-func (s* RedisStore) SetProcessing(key string) (bool, error){
-	ctx:= context.Background()
+func (s* RedisStore) SetProcessing(ctx context.Context,key string) (bool, error){
 
 	ok, err := s.redisClient.SetNX(ctx, s.key(key), `{"status_code":0}`, s.ttl).Result()
 	if err !=nil{

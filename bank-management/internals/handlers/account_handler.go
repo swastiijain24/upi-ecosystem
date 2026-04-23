@@ -45,28 +45,30 @@ func (h *AccountHandler) CreateAccount(c *gin.Context) {
 	c.JSON(201, account)
 }
 
-func (h *AccountHandler) DiscoverAccounts(c *gin.Context){
-	var phone string 
+func (h *AccountHandler) DiscoverAccounts(c *gin.Context) {
+	var phone Phone
 	err := c.ShouldBindJSON(&phone)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err})
+		return
 	}
-	accounts, err := h.accountService.DiscoverAccounts(c.Request.Context(), phone)
+	accounts, err := h.accountService.DiscoverAccounts(c.Request.Context(), phone.Phone)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(201, accounts)
+	c.JSON(200, accounts)
 }
 
-func (h *AccountHandler) SetMpin(c *gin.Context){
+func (h *AccountHandler) SetMpin(c *gin.Context) {
 	id := c.Param("id")
-	var mpinEn string 
+	var mpinEn MpinEn
 	err := c.ShouldBindJSON(&mpinEn)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err})
+		return
 	}
-	err = h.accountService.SetMpin(c.Request.Context(), id, mpinEn)
+	err = h.accountService.SetMpin(c.Request.Context(), id, mpinEn.MpinEn)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -74,13 +76,14 @@ func (h *AccountHandler) SetMpin(c *gin.Context){
 	c.JSON(200, http.StatusOK)
 }
 
-func (h *AccountHandler) ChangeMpin(c *gin.Context){
+func (h *AccountHandler) ChangeMpin(c *gin.Context) {
 	id := c.Param("id")
 
 	var mpins ChangeMpinReq
 	err := c.ShouldBindJSON(&mpins)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err})
+		return
 	}
 	err = h.accountService.ChangeMpin(c.Request.Context(), id, mpins.OldMpinEn, mpins.NewMpinEn)
 	if err != nil {
@@ -92,8 +95,8 @@ func (h *AccountHandler) ChangeMpin(c *gin.Context){
 
 func (h *AccountHandler) GetBalance(c *gin.Context) {
 	id := c.Param("id")
-	var mpinEn string 
-	balance, err := h.accountService.GetBalance(c.Request.Context(), id, mpinEn)
+	var mpinEn MpinEn
+	balance, err := h.accountService.GetBalance(c.Request.Context(), id, mpinEn.MpinEn)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -118,8 +121,15 @@ type CreateAccountReq struct {
 	MpinHash string `json:"mpin_hash" binding:"required"`
 }
 
-
 type ChangeMpinReq struct {
 	OldMpinEn string `json:"old_mpin_encrypted" binding:"required"`
 	NewMpinEn string `json:"new_mpin_encrypted" binding:"required"`
+}
+
+type Phone struct {
+	Phone string `json:"phone" binding:"required,e164"`
+}
+
+type MpinEn struct {
+	MpinEn string `json:"mpin_encrypted" binding:"required"`
 }

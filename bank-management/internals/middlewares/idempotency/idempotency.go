@@ -66,7 +66,7 @@ func (m *IdempotencyMiddleware) IdempotencyCheck() gin.HandlerFunc {
 			return
 		}
 
-		cached, err := m.redisStore.Get(key)
+		cached, err := m.redisStore.Get(c.Request.Context(), key)
 		if err != nil {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
@@ -78,7 +78,7 @@ func (m *IdempotencyMiddleware) IdempotencyCheck() gin.HandlerFunc {
 			return
 		}
 
-		acquired, err := m.redisStore.SetProcessing(key)
+		acquired, err := m.redisStore.SetProcessing(c.Request.Context(), key)
 		if err != nil {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
@@ -111,9 +111,9 @@ func (m *IdempotencyMiddleware) IdempotencyCheck() gin.HandlerFunc {
 			}
 		}
 
-		if isSafeToCache(writer.statusCode){
-			_ = m.redisStore.Set(key, response)
-		} else{
+		if isSafeToCache(writer.statusCode) {
+			_ = m.redisStore.Set(c.Request.Context(), key, response)
+		} else {
 			_ = m.redisStore.Delete(key)
 		}
 
@@ -131,11 +131,5 @@ func (m *IdempotencyMiddleware) replayGinResponse(c *gin.Context, resp *Response
 }
 
 func isSafeToCache(status int) bool {
-	if status >= 200 && status <300 {
-		return true 
-	}
-	if status >= 400 && status <500 {
-		return true 
-	}
-	return false 
+	return status >= 200 && status < 300
 }
