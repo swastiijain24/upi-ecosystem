@@ -33,6 +33,7 @@ func main() {
 	r.Use(gin.Recovery())
 
 	log.Printf("initializing")
+
 	Initialize(r, pool)
 
 	log.Printf("initialized all")
